@@ -1,0 +1,30 @@
+<.header>
+  Upgrade log {@upgrade_log.id}
+  <:subtitle>This is a upgrade_log record from your database.</:subtitle>
+  <:actions>
+    <.link patch={~p"/upgrade_logs/#{@upgrade_log}/show/edit"} phx-click={JS.push_focus()}>
+      <.button>Edit upgrade_log</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.list>
+  <:item title="Mac address">{@upgrade_log.mac_address}</:item>
+  <:item title="Old sysdescr">{@upgrade_log.old_sysdescr}</:item>
+  <:item title="New sysdescr">{@upgrade_log.new_sysdescr}</:item>
+  <:item title="New firmware">{@upgrade_log.new_firmware}</:item>
+  <:item title="Upgraded at">{@upgrade_log.upgraded_at}</:item>
+</.list>
+
+<.back navigate={~p"/upgrade_logs"}>Back to upgrade_logs</.back>
+
+<.modal :if={@live_action == :edit} id="upgrade_log-modal" show on_cancel={JS.patch(~p"/upgrade_logs/#{@upgrade_log}")}>
+  <.live_component
+    module={FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.FormComponent}
+    id={@upgrade_log.id}
+    title={@page_title}
+    action={@live_action}
+    upgrade_log={@upgrade_log}
+    patch={~p"/upgrade_logs/#{@upgrade_log}"}
+  />
+</.modal>

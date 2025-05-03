@@ -18,6 +18,13 @@ defmodule FirmwareManagerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    
+    live "/upgrade_logs", FirmwareManagerWeb.UpgradeLogLive.Index, :index
+    live "/upgrade_logs/new", FirmwareManagerWeb.UpgradeLogLive.Index, :new
+    live "/upgrade_logs/:id/edit", FirmwareManagerWeb.UpgradeLogLive.Index, :edit
+
+    live "/upgrade_logs/:id", FirmwareManagerWeb.UpgradeLogLive.Show, :show
+    live "/upgrade_logs/:id/show/edit", FirmwareManagerWeb.UpgradeLogLive.Show, :edit
   end
 
   # Other scopes may use custom stacks.

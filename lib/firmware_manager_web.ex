@@ -70,6 +70,7 @@ defmodule FirmwareManagerWeb do
   def html do
     quote do
       use Phoenix.Component
+      import FirmwareManagerWeb.CoreComponents
 
       # Import convenience functions from controllers
       import Phoenix.Controller,

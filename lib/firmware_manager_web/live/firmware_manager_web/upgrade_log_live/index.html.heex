@@ -1,0 +1,48 @@
+<.header>
+  Listing Upgrade logs (<%= @total_entries %> total)
+</.header>
+
+<.table
+  id="upgrade_logs"
+  rows={@streams.upgrade_logs}
+  row_click={fn {_id, upgrade_log} -> JS.navigate(~p"/upgrade_logs/#{upgrade_log}") end}
+>
+  <:col :let={{_id, upgrade_log}} label="Mac address">{upgrade_log.mac_address}</:col>
+  <:col :let={{_id, upgrade_log}} label="Old sysdescr">{upgrade_log.old_sysdescr}</:col>
+  <:col :let={{_id, upgrade_log}} label="New sysdescr">{upgrade_log.new_sysdescr}</:col>
+  <:col :let={{_id, upgrade_log}} label="New firmware">{upgrade_log.new_firmware}</:col>
+  <:col :let={{_id, upgrade_log}} label="Upgraded at">{upgrade_log.upgraded_at}</:col>
+</.table>
+
+<div class="mt-5 flex justify-between items-center">
+  <div class="text-sm text-gray-700 dark:text-gray-400">
+    Showing <span class="font-medium"><%= (@page - 1) * @page_size + 1 %></span> to <span class="font-medium"><%= min(@page * @page_size, @total_entries) %></span> of <span class="font-medium"><%= @total_entries %></span> entries
+  </div>
+  
+  <div>
+    <FirmwareManagerWeb.Components.Pagination.pagination
+      id="upgrade-logs-pagination"
+      total={@total_pages}
+      active={@page}
+      siblings={1}
+      boundaries={1}
+      show_edges
+      on_select={JS.push("paginate", value: %{page: "$PAGE$"})}
+      on_next={JS.push("paginate", value: %{page: @page + 1})}
+      on_previous={JS.push("paginate", value: %{page: @page - 1})}
+      on_first={JS.push("paginate", value: %{page: 1})}
+      on_last={JS.push("paginate", value: %{page: @total_pages})}
+    />
+  </div>
+</div>
+
+<.modal :if={@live_action in [:new, :edit]} id="upgrade_log-modal" show on_cancel={JS.patch(~p"/upgrade_logs")}>
+  <.live_component
+    module={FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.FormComponent}
+    id={@upgrade_log.id || :new}
+    title={@page_title}
+    action={@live_action}
+    upgrade_log={@upgrade_log}
+    patch={~p"/upgrade_logs"}
+  />
+</.modal>

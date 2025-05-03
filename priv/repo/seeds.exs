@@ -10,8 +10,72 @@
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 
-alias FirmwareManager.Modem.UpgradeLog
+alias FirmwareManager.Modem
 alias FirmwareManager.Repo
+
+defmodule Seeds do
+  def random_mac do
+    1..6
+    |> Enum.map(fn _ -> Integer.to_string(:rand.uniform(255), 16) |> String.downcase() |> String.pad_leading(2, "0") end)
+    |> Enum.join(":")
+  end
+
+  def truncate_logs do
+    Modem.delete_all_upgrade_logs()
+    IO.puts("Truncated upgrade logs")
+  end
+  
+  def truncate_cmts do
+    Repo.delete_all(FirmwareManager.Modem.Cmts)
+    IO.puts("Truncated CMTS entries")
+  end
+  
+  def create_cmts_entries do
+    cmts_entries = [
+      %{
+        name: "Main Office CMTS",
+        ip: "192.168.1.100",
+        snmp_read: "public",
+        modem_snmp_read: "public",
+        modem_snmp_write: "private"
+      },
+      %{
+        name: "Downtown Hub",
+        ip: "192.168.1.101",
+        snmp_read: "community1",
+        modem_snmp_read: "modem_read1",
+        modem_snmp_write: "modem_write1"
+      },
+      %{
+        name: "East Side Distribution",
+        ip: "10.0.0.1",
+        snmp_read: "community2",
+        modem_snmp_read: "modem_read2",
+        modem_snmp_write: "modem_write2"
+      },
+      %{
+        name: "West Region Hub",
+        ip: "10.10.10.1",
+        snmp_read: "community3",
+        modem_snmp_read: "modem_read3",
+        modem_snmp_write: "modem_write3"
+      },
+      %{
+        name: "Data Center Primary",
+        ip: "172.16.0.1",
+        snmp_read: "community4",
+        modem_snmp_read: "modem_read4",
+        modem_snmp_write: "modem_write4"
+      }
+    ]
+    
+    Enum.each(cmts_entries, fn cmts_params ->
+      Modem.create_cmts(cmts_params)
+    end)
+    
+    IO.puts("Created #{length(cmts_entries)} CMTS entries")
+  end
+end
 
 # Function to generate a random MAC address
 random_mac_address = fn ->
@@ -83,7 +147,7 @@ for _ <- 1..2500 do
   upgraded_at = random_date_within_months.(6)
 
   # Insert directly using Repo
-  Repo.insert!(%UpgradeLog{
+  Repo.insert!(%FirmwareManager.Modem.UpgradeLog{
     id: Ecto.UUID.generate(),
     mac_address: mac_address,
     old_sysdescr: old_sysdescr,
@@ -94,3 +158,9 @@ for _ <- 1..2500 do
 end
 
 IO.puts("\n✅ Created 2500 sample upgrade logs")
+
+# Clear existing CMTS entries and create new ones
+IO.puts("\nGenerating CMTS entries...")
+Seeds.truncate_cmts()
+Seeds.create_cmts_entries()
+IO.puts("\n✅ Seed data generation complete!")

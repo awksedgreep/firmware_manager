@@ -19,13 +19,25 @@ defmodule FirmwareManagerWeb.Router do
 
     get "/", PageController, :home
     get "/phoenix", EasterEggController, :phoenix
+  end
+  
+  # Use a separate scope for LiveView routes to avoid module resolution issues
+  scope "/", FirmwareManagerWeb do
+    pipe_through :browser
     
-    live "/upgrade_logs", FirmwareManagerWeb.UpgradeLogLive.Index, :index
-    live "/upgrade_logs/new", FirmwareManagerWeb.UpgradeLogLive.Index, :new
-    live "/upgrade_logs/:id/edit", FirmwareManagerWeb.UpgradeLogLive.Index, :edit
+    # UpgradeLog routes
+    live "/upgrade_logs", UpgradeLogLive.Index, :index
+    live "/upgrade_logs/new", UpgradeLogLive.Index, :new
+    live "/upgrade_logs/:id/edit", UpgradeLogLive.Index, :edit
+    live "/upgrade_logs/:id", UpgradeLogLive.Show, :show
+    live "/upgrade_logs/:id/show/edit", UpgradeLogLive.Show, :edit
 
-    live "/upgrade_logs/:id", FirmwareManagerWeb.UpgradeLogLive.Show, :show
-    live "/upgrade_logs/:id/show/edit", FirmwareManagerWeb.UpgradeLogLive.Show, :edit
+    # CMTS routes
+    live "/cmts", CmtsLive.Index, :index
+    live "/cmts/new", CmtsLive.Index, :new
+    live "/cmts/:id/edit", CmtsLive.Index, :edit
+    live "/cmts/:id", CmtsLive.Show, :show
+    live "/cmts/:id/show/edit", CmtsLive.Show, :edit
   end
 
   # Other scopes may use custom stacks.

@@ -1,4 +1,4 @@
-defmodule FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.FormComponent do
+defmodule FirmwareManagerWeb.UpgradeLogLive.FormComponent do
   use FirmwareManagerWeb, :live_component
 
   alias FirmwareManager.Modem

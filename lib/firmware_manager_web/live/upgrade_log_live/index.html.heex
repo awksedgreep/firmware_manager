@@ -158,7 +158,7 @@
 
 <.modal :if={@live_action in [:new, :edit]} id="upgrade_log-modal" show on_cancel={JS.patch(~p"/upgrade_logs")}>
   <.live_component
-    module={FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.FormComponent}
+    module={FirmwareManagerWeb.UpgradeLogLive.FormComponent}
     id={@upgrade_log.id || :new}
     title={@page_title}
     action={@live_action}

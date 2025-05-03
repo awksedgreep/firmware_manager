@@ -10,6 +10,7 @@ defmodule FirmwareManager.Modem do
 
   resources do
     resource FirmwareManager.Modem.UpgradeLog
+    resource FirmwareManager.Modem.Cmts
   end
 
   @doc """
@@ -186,5 +187,163 @@ defmodule FirmwareManager.Modem do
   def delete_all_upgrade_logs do
     # Use a direct SQL approach since we're deleting all records
     FirmwareManager.Repo.delete_all(FirmwareManager.Modem.UpgradeLog)
+  end
+
+  # CMTS CRUD Operations
+
+  @doc """
+  Lists all CMTS entries.
+
+  ## Options
+
+  * `:limit` - Limit the number of results (default: 100)
+  * `:sort` - Sort direction, can be `:asc` or `:desc` (default: `:asc`)
+  * `:sort_by` - Field to sort by (default: `:ip`)
+  * `:filter` - A filter to apply to the query
+
+  ## Examples
+
+      # Get all CMTS entries
+      FirmwareManager.Modem.list_cmts()
+
+      # Get CMTS entries with a specific IP
+      FirmwareManager.Modem.list_cmts(filter: [ip: "192.168.1.1"])
+  """
+  def list_cmts(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 100)
+    offset = Keyword.get(opts, :offset, 0)
+    filter_conditions = Keyword.get(opts, :filter, [])
+    
+    query = FirmwareManager.Modem.Cmts
+    
+    # Apply filter if provided
+    query = Enum.reduce(filter_conditions, query, fn {field, value}, acc ->
+      Ash.Query.filter(acc, expr(^ref(field) == ^value))
+    end)
+    
+    # Apply sorting if specified
+    query = if Keyword.has_key?(opts, :sort) or Keyword.has_key?(opts, :sort_by) do
+      sort_direction = Keyword.get(opts, :sort, :asc)
+      sort_by = Keyword.get(opts, :sort_by, :ip)
+      
+      # Handle different field names appropriately
+      case sort_by do
+        :ip -> Ash.Query.sort(query, ip: sort_direction)
+        :snmp_read -> Ash.Query.sort(query, snmp_read: sort_direction)
+        :modem_snmp_read -> Ash.Query.sort(query, modem_snmp_read: sort_direction)
+        :modem_snmp_write -> Ash.Query.sort(query, modem_snmp_write: sort_direction)
+        :inserted_at -> Ash.Query.sort(query, inserted_at: sort_direction)
+        :updated_at -> Ash.Query.sort(query, updated_at: sort_direction)
+        _ -> 
+          # Default to IP if an unsupported sort field is provided
+          Ash.Query.sort(query, ip: :asc)
+      end
+    else
+      # Default sort by IP ascending
+      Ash.Query.sort(query, ip: :asc)
+    end
+    
+    # Apply offset for pagination if provided
+    query = if offset > 0 do
+      Ash.Query.offset(query, offset)
+    else
+      query
+    end
+    
+    # Apply limit unless it's :infinity
+    query = case limit do
+      :infinity -> query
+      _ -> Ash.Query.limit(query, limit)
+    end
+    
+    # Execute the query
+    Ash.read!(query)
+  end
+
+  alias FirmwareManager.Modem.Cmts
+
+  @doc """
+  Gets a single CMTS.
+
+  Raises if the CMTS does not exist.
+
+  ## Examples
+
+      iex> get_cmts!("123e4567-e89b-12d3-a456-426614174000")
+      %Cmts{}
+
+  """
+  def get_cmts!(id) do
+    FirmwareManager.Modem.Cmts
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.read_one!()
+  end
+
+  @doc """
+  Creates a CMTS.
+
+  ## Examples
+
+      iex> create_cmts(%{field: value})
+      {:ok, %Cmts{}}
+
+      iex> create_cmts(%{field: bad_value})
+      {:error, ...}
+
+  """
+  def create_cmts(attrs \\ %{}) do
+    FirmwareManager.Modem.Cmts
+    |> Ash.Changeset.for_create(:create, attrs)
+    |> Ash.create()
+  end
+
+  @doc """
+  Updates a CMTS.
+
+  ## Examples
+
+      iex> update_cmts(cmts, %{field: new_value})
+      {:ok, %Cmts{}}
+
+      iex> update_cmts(cmts, %{field: bad_value})
+      {:error, ...}
+
+  """
+  def update_cmts(%Cmts{} = cmts, attrs) do
+    cmts
+    |> Ash.Changeset.for_update(:update, attrs)
+    |> Ash.update()
+  end
+
+  @doc """
+  Deletes a CMTS.
+
+  ## Examples
+
+      iex> delete_cmts(cmts)
+      {:ok, %Cmts{}}
+
+      iex> delete_cmts(cmts)
+      {:error, ...}
+
+  """
+  def delete_cmts(%Cmts{} = cmts) do
+    cmts
+    |> Ash.Changeset.for_destroy(:destroy)
+    |> Ash.destroy()
+  end
+
+  @doc """
+  Returns a data structure for tracking CMTS changes.
+
+  ## Examples
+
+      iex> change_cmts(cmts)
+      %Todo{...}
+
+  """
+  def change_cmts(%Cmts{} = cmts, attrs \\ %{}) do
+    cmts
+    |> Ash.Changeset.for_update(:update, attrs)
   end
 end

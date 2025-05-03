@@ -1,4 +1,4 @@
-defmodule FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.Show do
+defmodule FirmwareManagerWeb.UpgradeLogLive.Show do
   use FirmwareManagerWeb, :live_view
 
   alias FirmwareManager.Modem

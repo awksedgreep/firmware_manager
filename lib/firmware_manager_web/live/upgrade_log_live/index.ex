@@ -1,4 +1,4 @@
-defmodule FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.Index do
+defmodule FirmwareManagerWeb.UpgradeLogLive.Index do
   use FirmwareManagerWeb, :live_view
 
   @default_page_size 20
@@ -79,7 +79,7 @@ defmodule FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.Index do
   end
 
   @impl true
-  def handle_info({FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.FormComponent, {:saved, upgrade_log}}, socket) do
+  def handle_info({FirmwareManagerWeb.UpgradeLogLive.FormComponent, {:saved, upgrade_log}}, socket) do
     {:noreply, stream_insert(socket, :upgrade_logs, upgrade_log)}
   end
 

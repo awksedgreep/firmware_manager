@@ -10,37 +10,78 @@
   </div>
 </.header>
 
-<.table
-  id="cmts"
-  rows={@streams.cmts_collection}
-  row_click={fn {_id, cmts} -> JS.navigate(~p"/cmts/#{cmts}") end}
->
-  <:col :let={{_id, cmts}} label="Name"><%= cmts.name || "--" %></:col>
-  <:col :let={{_id, cmts}} label="IP Address"><%= cmts.ip %></:col>
-  <:col :let={{_id, cmts}} label="SNMP Read"><%= cmts.snmp_read %></:col>
-  <:col :let={{_id, cmts}} label="Modem SNMP Read"><%= cmts.modem_snmp_read %></:col>
-  <:col :let={{_id, cmts}} label="Modem SNMP Write"><%= cmts.modem_snmp_write %></:col>
-  <:action :let={{_id, cmts}}>
-    <div class="sr-only">
-      <.link navigate={~p"/cmts/#{cmts}"}>Show</.link>
-    </div>
-    <.link patch={~p"/cmts/#{cmts}/edit"} class="text-blue-400 hover:text-blue-300">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-      </svg>
-    </.link>
-  </:action>
-  <:action :let={{_id, cmts}}>
-    <.link
-      phx-click={JS.push("delete", value: %{id: cmts.id}) |> JS.dispatch("phx:confirm", detail: %{message: "Are you sure you want to delete this CMTS?"})}
-      class="text-red-400 hover:text-red-300"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-      </svg>
-    </.link>
-  </:action>
-</.table>
+<div class="overflow-y-auto px-4 sm:overflow-visible sm:px-0">
+  <table class="w-full mt-11">
+    <thead class="text-sm text-left leading-6 text-gray-400">
+      <tr>
+        <th class="p-0 pb-4 pr-6 font-normal">Name</th>
+        <th class="p-0 pb-4 pr-6 font-normal">IP Address</th>
+        <th class="p-0 pb-4 pr-6 font-normal">SNMP Read</th>
+        <th class="p-0 pb-4 pr-6 font-normal">Modem SNMP Read</th>
+        <th class="p-0 pb-4 pr-6 font-normal">Modem SNMP Write</th>
+        <th class="relative p-0 pb-4"><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody class="relative divide-y divide-zinc-800 border-t border-zinc-700 text-sm leading-6 text-gray-300">
+      <%= for cmts <- @cmts_collection do %>
+        <tr id={"cmts-#{cmts.id}"} class="group hover:bg-zinc-800">
+          <td class="relative p-0">
+            <div class="block py-4 pr-6">
+              <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800 sm:rounded-l-xl"></span>
+              <span class="relative font-semibold text-gray-100"><%= cmts.name || "--" %></span>
+            </div>
+          </td>
+          <td class="relative p-0">
+            <div class="block py-4 pr-6">
+              <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800"></span>
+              <span class="relative"><%= cmts.ip %></span>
+            </div>
+          </td>
+          <td class="relative p-0">
+            <div class="block py-4 pr-6">
+              <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800"></span>
+              <span class="relative"><%= cmts.snmp_read %></span>
+            </div>
+          </td>
+          <td class="relative p-0">
+            <div class="block py-4 pr-6">
+              <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800"></span>
+              <span class="relative"><%= cmts.modem_snmp_read %></span>
+            </div>
+          </td>
+          <td class="relative p-0">
+            <div class="block py-4 pr-6">
+              <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800"></span>
+              <span class="relative"><%= cmts.modem_snmp_write %></span>
+            </div>
+          </td>
+          <td class="relative w-14 p-0">
+            <div class="relative whitespace-nowrap py-4 text-right text-sm font-medium">
+              <span class="absolute -inset-y-px -right-4 left-0 group-hover:bg-zinc-800 sm:rounded-r-xl"></span>
+              <span class="relative ml-4 font-semibold leading-6 text-gray-300 hover:text-gray-100">
+                <.link patch={~p"/cmts/#{cmts}/edit"} class="text-blue-400 hover:text-blue-300 mr-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </.link>
+                <button 
+                  phx-click="delete_cmts"
+                  phx-value-id={cmts.id}
+                  data-confirm="Are you sure you want to delete this CMTS?"
+                  class="text-red-400 hover:text-red-300 inline-block"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </span>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
 
 <.modal :if={@live_action in [:new, :edit]} id="cmts-modal" show on_cancel={JS.patch(~p"/cmts")}>
   <.live_component

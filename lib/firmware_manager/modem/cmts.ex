@@ -11,7 +11,7 @@ defmodule FirmwareManager.Modem.Cmts do
   end
 
   actions do
-    defaults [:destroy]
+    # No defaults needed as we define all actions explicitly
     
     read :read do
       primary? true
@@ -24,6 +24,10 @@ defmodule FirmwareManager.Modem.Cmts do
 
     update :update do
       accept [:name, :ip, :snmp_read, :modem_snmp_read, :modem_snmp_write]
+    end
+    
+    destroy :destroy do
+      primary? true
     end
   end
 

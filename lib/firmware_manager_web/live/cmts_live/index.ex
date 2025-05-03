@@ -6,7 +6,8 @@ defmodule FirmwareManagerWeb.CmtsLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :cmts_collection, Modem.list_cmts())}
+    # Fetch CMTS records and assign them directly to the socket
+    {:ok, assign(socket, :cmts_collection, Modem.list_cmts())}
   end
 
   @impl true
@@ -33,15 +34,30 @@ defmodule FirmwareManagerWeb.CmtsLive.Index do
   end
 
   @impl true
-  def handle_info({FirmwareManagerWeb.CmtsLive.FormComponent, {:saved, cmts}}, socket) do
-    {:noreply, stream_insert(socket, :cmts_collection, cmts)}
+  def handle_info({FirmwareManagerWeb.CmtsLive.FormComponent, {:saved, _cmts}}, socket) do
+    # Reload the entire CMTS collection after a save
+    {:noreply, assign(socket, :cmts_collection, Modem.list_cmts())}
   end
 
   @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
+  def handle_event("delete_cmts", %{"id" => id}, socket) do
+    # Get the CMTS record
     cmts = Modem.get_cmts!(id)
-    {:ok, _} = Modem.delete_cmts(cmts)
-
-    {:noreply, stream_delete(socket, :cmts_collection, cmts)}
+    
+    # Try to delete it
+    case Modem.delete_cmts(cmts) do
+      {:ok, _deleted_cmts} ->
+        # Reload the CMTS collection after successful deletion
+        {:noreply, 
+         socket
+         |> assign(:cmts_collection, Modem.list_cmts())
+         |> put_flash(:info, "CMTS deleted successfully.")}
+        
+      {:error, changeset} ->
+        # Handle error case
+        {:noreply, 
+         socket
+         |> put_flash(:error, "Could not delete CMTS: #{inspect(changeset.errors)}")}
+    end
   end
 end

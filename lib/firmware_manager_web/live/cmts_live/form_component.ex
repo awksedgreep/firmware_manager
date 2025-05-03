@@ -57,16 +57,46 @@ defmodule FirmwareManagerWeb.CmtsLive.FormComponent do
     """
   end
 
+  # Default values for new CMTS records
+  @default_values %{
+    name: "",
+    ip: "10.10.10.10",
+    snmp_read: "public",
+    modem_snmp_read: "public",
+    modem_snmp_write: "private"
+  }
+
   @impl true
   def update(%{cmts: cmts} = assigns, socket) do
+    # For edit, use the existing values; for new, use the default values
+    values = if assigns.action == :new do
+      # For new CMTS, use default values
+      %{
+        name: @default_values.name,
+        ip: @default_values.ip,
+        snmp_read: @default_values.snmp_read,
+        modem_snmp_read: @default_values.modem_snmp_read,
+        modem_snmp_write: @default_values.modem_snmp_write
+      }
+    else
+      # For existing CMTS, use its values
+      %{
+        name: cmts.name || "",
+        ip: cmts.ip || "",
+        snmp_read: cmts.snmp_read || "",
+        modem_snmp_read: cmts.modem_snmp_read || "",
+        modem_snmp_write: cmts.modem_snmp_write || ""
+      }
+    end
+
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:name, cmts.name || "")
-     |> assign(:ip, cmts.ip || "")
-     |> assign(:snmp_read, cmts.snmp_read || "")
-     |> assign(:modem_snmp_read, cmts.modem_snmp_read || "")
-     |> assign(:modem_snmp_write, cmts.modem_snmp_write || "")}
+     |> assign(:name, values.name)
+     |> assign(:ip, values.ip)
+     |> assign(:snmp_read, values.snmp_read)
+     |> assign(:modem_snmp_read, values.modem_snmp_read)
+     |> assign(:modem_snmp_write, values.modem_snmp_write)}
   end
 
   @impl true

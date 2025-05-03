@@ -65,8 +65,21 @@ for _ <- 1..2500 do
   mac_address = random_mac_address.()
   old_version = random_firmware_version.()
   new_version = random_newer_firmware_version.(old_version)
-  old_sysdescr = "Modem System #{old_version}, Hardware Rev. #{:rand.uniform(5)}"
-  new_sysdescr = "Modem System #{new_version}, Hardware Rev. #{:rand.uniform(5)}"
+  # Generate longer sysdescr values to test truncation
+  vendor = Enum.random(["Cisco", "Arris", "Motorola", "Technicolor", "Ubee", "Netgear"])
+  model = "#{Enum.random(["DPC", "SB", "CGM", "SVG", "TG"])}#{:rand.uniform(4000)}"
+  build = "#{:rand.uniform(100)}.#{:rand.uniform(100)}.#{:rand.uniform(100)}"
+  chip = Enum.random(["Broadcom BCM3390", "Intel Puma 7", "MediaTek MT7621", "Qualcomm IPQ8074"])
+  features = Enum.random([
+    "DOCSIS 3.1, 2x2 OFDM/OFDMA", 
+    "DOCSIS 3.0, 32x8 Channel Bonding",
+    "DOCSIS 3.1, 2x2 OFDM/OFDMA with Full Duplex",
+    "DOCSIS 3.0, 24x8 Channel Bonding with Voice"
+  ])
+  
+  old_sysdescr = "#{vendor} #{model} Modem System #{old_version}, Hardware Rev. #{:rand.uniform(5)}, Build #{build}, #{chip}, #{features}, MAC #{random_mac_address.()}"
+  new_sysdescr = "#{vendor} #{model} Modem System #{new_version}, Hardware Rev. #{:rand.uniform(5)}, Build #{build}, #{chip}, #{features}, MAC #{random_mac_address.()}"
+
   upgraded_at = random_date_within_months.(6)
 
   # Insert directly using Repo

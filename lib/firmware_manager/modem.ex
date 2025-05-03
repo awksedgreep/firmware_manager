@@ -53,6 +53,9 @@ defmodule FirmwareManager.Modem do
       # Handle different field names appropriately
       case sort_by do
         :mac_address -> Ash.Query.sort(query, mac_address: sort_direction)
+        :old_sysdescr -> Ash.Query.sort(query, old_sysdescr: sort_direction)
+        :new_sysdescr -> Ash.Query.sort(query, new_sysdescr: sort_direction)
+        :new_firmware -> Ash.Query.sort(query, new_firmware: sort_direction)
         :upgraded_at -> Ash.Query.sort(query, upgraded_at: sort_direction)
         _ -> 
           # Default to upgraded_at if an unsupported sort field is provided
@@ -70,8 +73,11 @@ defmodule FirmwareManager.Modem do
       query
     end
     
-    # Apply limit
-    query = Ash.Query.limit(query, limit)
+    # Apply limit unless it's :infinity
+    query = case limit do
+      :infinity -> query
+      _ -> Ash.Query.limit(query, limit)
+    end
     
     # Execute the query
     Ash.read!(query)

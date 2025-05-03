@@ -171,4 +171,20 @@ defmodule FirmwareManager.Modem do
     upgrade_log
     |> Ash.Changeset.for_update(:update, attrs)
   end
+
+  @doc """
+  Deletes all upgrade logs from the database.
+
+  ## Examples
+
+      iex> delete_all_upgrade_logs()
+      {count, nil}
+
+  Returns the number of records deleted.
+  """
+  @spec delete_all_upgrade_logs() :: {integer(), nil}
+  def delete_all_upgrade_logs do
+    # Use a direct SQL approach since we're deleting all records
+    FirmwareManager.Repo.delete_all(FirmwareManager.Modem.UpgradeLog)
+  end
 end

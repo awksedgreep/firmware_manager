@@ -152,4 +152,18 @@ defmodule FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLive.Index do
         {:noreply, socket}
     end
   end
+
+  @impl true
+  def handle_event("truncate_logs", _params, socket) do
+    # Delete all upgrade logs
+    FirmwareManager.Modem.delete_all_upgrade_logs()
+    
+    # Reset pagination to page 1 and refresh data
+    socket = 
+      socket
+      |> assign(:page, 1)
+      |> load_upgrade_logs()
+    
+    {:noreply, socket |> put_flash(:info, "All upgrade logs have been deleted.")}
+  end
 end

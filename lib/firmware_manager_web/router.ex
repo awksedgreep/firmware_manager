@@ -18,6 +18,7 @@ defmodule FirmwareManagerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/phoenix", EasterEggController, :phoenix
     
     live "/upgrade_logs", FirmwareManagerWeb.UpgradeLogLive.Index, :index
     live "/upgrade_logs/new", FirmwareManagerWeb.UpgradeLogLive.Index, :new

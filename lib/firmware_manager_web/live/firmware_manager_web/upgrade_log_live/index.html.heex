@@ -1,8 +1,38 @@
 <.header class="mb-6">
   <div class="flex justify-between items-center">
     <h1 class="text-2xl font-bold text-white">Upgrade Logs (<%= @total_entries %> total)</h1>
+    <div>
+      <button 
+        phx-click={JS.show(to: "#confirm-truncate-modal")}
+        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md shadow-sm transition-colors duration-150 ease-in-out flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Truncate Logs
+      </button>
+    </div>
   </div>
 </.header>
+
+<!-- Confirmation Modal -->
+<div id="confirm-truncate-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+  <div class="bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full border border-gray-700">
+    <h3 class="text-xl font-semibold text-gray-100 mb-4">Confirm Deletion</h3>
+    <p class="text-gray-300 mb-6">Are you sure you want to delete ALL upgrade logs? This action cannot be undone.</p>
+    <div class="flex justify-end space-x-3">
+      <button 
+        phx-click={JS.hide(to: "#confirm-truncate-modal")}
+        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors duration-150">
+        Cancel
+      </button>
+      <button 
+        phx-click={JS.push("truncate_logs") |> JS.hide(to: "#confirm-truncate-modal")}
+        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors duration-150">
+        Delete All Logs
+      </button>
+    </div>
+  </div>
+</div>
 
 <div class="overflow-x-auto">
   <table class="w-full mt-11">
@@ -93,26 +123,35 @@
   </table>
 </div>
 
-<div class="mt-6">
+<div class="mt-6" id="pagination-container" phx-hook="KeyboardNavigation" data-current-page={@page} data-total-pages={@total_pages}>
   <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
     <div class="text-sm text-gray-300">
       Showing <span class="font-medium text-gray-100"><%= (@page - 1) * @page_size + 1 %></span> to <span class="font-medium text-gray-100"><%= min(@page * @page_size, @total_entries) %></span> of <span class="font-medium text-gray-100"><%= @total_entries %></span> entries
     </div>
     
     <div>
-      <FirmwareManagerWeb.Components.Pagination.pagination
-        id="upgrade-logs-pagination"
-        total={@total_pages}
-        active={@page}
-        siblings={1}
-        boundaries={1}
-        show_edges
-        on_select={JS.push("pagination", value: %{page: "$PAGE$"})}
-        on_next={JS.push("pagination", value: %{page: @page + 1})}
-        on_previous={JS.push("pagination", value: %{page: @page - 1})}
-        on_first={JS.push("pagination", value: %{page: 1})}
-        on_last={JS.push("pagination", value: %{page: @total_pages})}
-      />
+      <div class="flex items-center gap-2">
+        <div class="hidden sm:flex items-center text-xs text-gray-400 mr-2">
+          <span class="mr-1">Tip: Use</span>
+          <kbd class="px-1.5 py-0.5 bg-zinc-700 rounded border border-zinc-600 text-gray-300">←</kbd>
+          <span class="mx-1">and</span>
+          <kbd class="px-1.5 py-0.5 bg-zinc-700 rounded border border-zinc-600 text-gray-300">→</kbd>
+          <span class="ml-1">to navigate</span>
+        </div>
+        <FirmwareManagerWeb.Components.Pagination.pagination
+          id="upgrade-logs-pagination"
+          total={@total_pages}
+          active={@page}
+          siblings={1}
+          boundaries={1}
+          show_edges
+          on_select={JS.push("pagination", value: %{page: "$PAGE$"})}
+          on_next={JS.push("pagination", value: %{page: @page + 1})}
+          on_previous={JS.push("pagination", value: %{page: @page - 1})}
+          on_first={JS.push("pagination", value: %{page: 1})}
+          on_last={JS.push("pagination", value: %{page: @total_pages})}
+        />
+      </div>
     </div>
   </div>
 </div>

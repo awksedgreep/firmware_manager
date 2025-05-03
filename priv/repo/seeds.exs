@@ -18,7 +18,7 @@ random_mac_address = fn ->
   Enum.map_join(1..6, ":", fn _ ->
     Integer.to_string(:rand.uniform(255), 16)
     |> String.pad_leading(2, "0")
-    |> String.upcase()
+    |> String.downcase()
   end)
 end
 
@@ -71,12 +71,12 @@ for _ <- 1..2500 do
   build = "#{:rand.uniform(100)}.#{:rand.uniform(100)}.#{:rand.uniform(100)}"
   chip = Enum.random(["Broadcom BCM3390", "Intel Puma 7", "MediaTek MT7621", "Qualcomm IPQ8074"])
   features = Enum.random([
-    "DOCSIS 3.1, 2x2 OFDM/OFDMA", 
+    "DOCSIS 3.1, 2x2 OFDM/OFDMA",
     "DOCSIS 3.0, 32x8 Channel Bonding",
     "DOCSIS 3.1, 2x2 OFDM/OFDMA with Full Duplex",
     "DOCSIS 3.0, 24x8 Channel Bonding with Voice"
   ])
-  
+
   old_sysdescr = "#{vendor} #{model} Modem System #{old_version}, Hardware Rev. #{:rand.uniform(5)}, Build #{build}, #{chip}, #{features}, MAC #{random_mac_address.()}"
   new_sysdescr = "#{vendor} #{model} Modem System #{new_version}, Hardware Rev. #{:rand.uniform(5)}, Build #{build}, #{chip}, #{features}, MAC #{random_mac_address.()}"
 

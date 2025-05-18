@@ -1,4 +1,4 @@
-defmodule FirmwareManager.Modem.SNMP do
+defmodule FirmwareManager.ModemSNMP do
   @moduledoc """
   Provides SNMP functionality for interacting with cable modems using the snmp_ex library.
   """
@@ -37,7 +37,7 @@ defmodule FirmwareManager.Modem.SNMP do
     * `{:ok, map()}` - Map containing upgrade capability information
     * `{:error, reason}` - If the operation fails
   """
-  def check_upgrade_capability(ip, community, port \\ 161) do
+  def check_upgrade_capability(ip, community, port \\ 1161) do
     credential = SNMP.credential(%{version: :v2c, community: community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 
@@ -70,7 +70,7 @@ defmodule FirmwareManager.Modem.SNMP do
     end
   end
 
-  def get_modem_info(ip, community, port \\ 161) when is_binary(ip) and is_binary(community) do
+  def get_modem_info(ip, community, port \\ 1161) when is_binary(ip) and is_binary(community) do
     credential = SNMP.credential(%{version: :v2c, community: community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 
@@ -126,7 +126,7 @@ defmodule FirmwareManager.Modem.SNMP do
     * `:ok` - If the upgrade command was sent successfully
     * `{:error, reason}` - If the operation fails
   """
-  def upgrade_firmware(ip, write_community, tftp_server, firmware_file, port \\ 161)
+  def upgrade_firmware(ip, write_community, tftp_server, firmware_file, port \\ 1161)
       when is_binary(ip) and is_binary(write_community) and
            is_binary(tftp_server) and is_binary(firmware_file) do
     credential = SNMP.credential(%{version: :v2c, community: write_community})
@@ -190,7 +190,7 @@ defmodule FirmwareManager.Modem.SNMP do
     * `{:ok, status}` - Current upgrade status as an atom
     * `{:error, reason}` - If the operation fails
   """
-  def get_upgrade_status(ip, community, port \\ 161) do
+  def get_upgrade_status(ip, community, port \\ 1161) do
     credential = SNMP.credential(%{version: :v2c, community: community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 

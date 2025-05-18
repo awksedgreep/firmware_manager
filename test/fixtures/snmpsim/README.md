@@ -50,7 +50,7 @@ This directory contains a complete SNMPSIM test environment for testing the Firm
 
 ## Configuration Files
 
-- `data/cable-modem.snmprec`: SNMP record file with DOCSIS OIDs for both CM and CMTS
+- `data/public.snmprec`: SNMP record file with DOCSIS OIDs for both CM and CMTS
 - `data/snmpd.conf`: SNMP daemon configuration
 
 ## Simulated Network

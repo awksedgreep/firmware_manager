@@ -1,161 +1,241 @@
-defmodule FirmwareManager.CMTS.SNMP do
+defmodule FirmwareManager.CMTSSNMP do
   @moduledoc """
-  Module for interacting with Cable Modem Termination System (CMTS) devices via SNMP.
+  Module for interacting with CMTS devices via SNMP.
+
+  This module provides functionality to discover modems connected to a CMTS
+  and retrieve information about them using SNMP.
   """
+
   require Logger
-  alias SNMP
 
-  # DOCS-IF-MIB OIDs for CMTS
-  @docs_if_mib [1, 3, 6, 1, 2, 1, 10, 127, 1, 3, 3, 1]  # docsIfCmtsCmStatusTable
+  @default_snmp_port 161
+  @default_community "public"
 
-  # Table columns
-  @cmts_cm_status_index        @docs_if_mib ++ [1]  # docsIfCmtsCmStatusIndex
-  @cmts_cm_status_mac_address  @docs_if_mib ++ [2]  # docsIfCmtsCmStatusMacAddress
-  @cmts_cm_status_ip_address   @docs_if_mib ++ [4]  # docsIfCmtsCmStatusInetAddress
-  @cmts_cm_status_value        @docs_if_mib ++ [6]  # docsIfCmtsCmStatusValue
-  @cmts_cm_status_uptime       @docs_if_mib ++ [7]  # docsIfCmtsCmStatusOnlineTime
+  # OID for docsIfCmtsCmStatusTable (RFC 3636)
+  @docs_if_cmts_cm_status_table [1, 3, 6, 1, 2, 1, 10, 127, 1, 3, 3, 1]
+  
+  # Specific column OIDs we care about
+  @docs_if_cmts_cm_status_mac_address @docs_if_cmts_cm_status_table ++ [2]
+  @docs_if_cmts_cm_status_value @docs_if_cmts_cm_status_table ++ [6]
+  @docs_if_cmts_cm_status_inet_address @docs_if_cmts_cm_status_table ++ [10]
 
-  # Status values
-  @cm_status_online 8
-  @cm_status_offline 9
+  # Status code mappings
+  @status_codes %{
+    1 => :other,
+    2 => :offline,
+    3 => :ranging,
+    4 => :ranging_aborted,
+    5 => :ranging_complete,
+    6 => :ip_complete,
+    7 => :registration_complete,
+    8 => :online,
+    9 => :access_denied
+  }
+
+  @type ip_address :: :inet.ip_address() | String.t()
+  @type port_number :: :inet.port_number()
+  @type community :: String.t()
+  @type modem :: %{
+    mac: String.t(),
+    ip: String.t(),
+    status: atom()
+  }
 
   @doc """
-  Discover all modems connected to the CMTS.
+  Discovers all modems connected to the CMTS by walking only the necessary columns.
+  This is optimized for large CMTS tables with many modems.
 
   ## Parameters
-    * `ip` - IP address of the CMTS
-    * `community` - SNMP community string (read-only)
-    * `port` - SNMP port (default: 161)
-    * `timeout` - SNMP timeout in milliseconds (default: 5000)
-    * `retries` - Number of SNMP retries (default: 2)
+    - `ip`: The IP address of the CMTS
+    - `community`: SNMP community string (default: "public")
+    - `port`: SNMP port (default: 161)
 
   ## Returns
-    * `{:ok, [%{mac: String.t, ip: String.t, status: atom, uptime: integer}]}` - List of modems
-    * `{:error, reason}` - If the operation fails
+    - `{:ok, [modem()]}` on success
+    - `{:error, reason}` on failure
   """
-  @spec discover_modems(String.t, String.t, :inet.port_number, integer, integer) ::
-        {:ok, [map]} | {:error, any}
-  def discover_modems(ip, community, port \\ 161, timeout \\ 5000, retries \\ 2) do
-    credential = SNMP.credential(%{version: :v2c, community: community, timeout: timeout, retries: retries})
+  @spec discover_modems(ip_address, community, port_number) :: {:ok, [modem()]} | {:error, any()}
+  def discover_modems(ip, community \\ @default_community, port \\ @default_snmp_port) do
+    # Set up SNMP credential and URI
+    credential = SNMP.credential(%{version: :v2c, community: community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 
-    # Get all modem entries from the CMTS
-    varbinds = [
-      %{oid: @cmts_cm_status_index},
-      %{oid: @cmts_cm_status_mac_address},
-      %{oid: @cmts_cm_status_ip_address},
-      %{oid: @cmts_cm_status_value},
-      %{oid: @cmts_cm_status_uptime}
-    ]
-
-    case SNMP.request(%{uri: uri, credential: credential, varbinds: varbinds}) do
-      {:ok, [indices, macs, ips, statuses, uptimes]} ->
-        process_modems(indices, macs, ips, statuses, uptimes)
-      error ->
-        Logger.error("Failed to discover modems: #{inspect(error)}")
-        error
+    # Only walk the columns we need: MAC addresses, status values, and IP addresses
+    with {:ok, mac_addresses} <- walk_column(uri, credential, @docs_if_cmts_cm_status_mac_address),
+         {:ok, status_values} <- walk_column(uri, credential, @docs_if_cmts_cm_status_value),
+         {:ok, ip_addresses} <- walk_column(uri, credential, @docs_if_cmts_cm_status_inet_address) do
+      # Combine the results by index
+      modems = combine_column_data(mac_addresses, status_values, ip_addresses)
+      {:ok, modems}
+    else
+      {:error, reason} -> 
+        Logger.error("SNMP walk failed: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 
+  # Walks a specific column in the CMTS status table.
+  @spec walk_column(URI.t(), map(), list()) :: {:ok, map()} | {:error, any()}
+  defp walk_column(uri, credential, column_oid) do
+    try do
+      # Perform the SNMP bulkwalk for this column
+      stream = SNMP.bulkwalk(%{uri: uri, credential: credential, varbinds: [%{oid: column_oid}]})
+      rows = Enum.to_list(stream)
+      
+      if is_list(rows) and rows != [] do
+        # Extract index and value from each row
+        result = Enum.reduce(rows, %{}, fn %{oid: oid, value: value}, acc ->
+          # Extract the index from the OID (last element)
+          index = List.last(oid)
+          Map.put(acc, index, value)
+        end)
+        {:ok, result}
+      else
+        Logger.warning("No results for column #{inspect(column_oid)}")
+        {:ok, %{}}
+      end
+    rescue
+      e -> 
+        Logger.error("Error walking column #{inspect(column_oid)}: #{inspect(e)}")
+        {:error, e}
+    end
+  end
+
+  # Combines data from multiple column walks into a list of modem maps.
+  @spec combine_column_data(map(), map(), map()) :: [modem()]
+  defp combine_column_data(mac_addresses, status_values, ip_addresses) do
+    # Get all unique indices
+    all_indices = mac_addresses |> Map.keys() |> MapSet.new()
+    
+    # Convert to list of modem maps
+    Enum.map(all_indices, fn index ->
+      # Extract MAC address
+      mac = case Map.get(mac_addresses, index) do
+        bin when is_binary(bin) ->
+          try do
+            # Convert binary MAC to colon-separated hex format
+            bin
+            |> :binary.bin_to_list()
+            |> Enum.map(&Integer.to_string(&1, 16) |> String.pad_leading(2, "0"))
+            |> Enum.join(":")
+          rescue
+            e ->
+              Logger.error("Error parsing MAC address: #{inspect(bin)}, error: #{inspect(e)}")
+              "00:00:00:00:00:00"
+          end
+        other -> 
+          Logger.warning("Unexpected MAC address format: #{inspect(other)}")
+          "unknown"
+      end
+
+      # Extract IP address
+      ip = case Map.get(ip_addresses, index) do
+        bin when is_binary(bin) and byte_size(bin) == 4 ->
+          try do
+            # Convert 4-byte binary IP to dotted decimal format
+            bin
+            |> :binary.bin_to_list()
+            |> Enum.join(".")
+          rescue
+            e ->
+              Logger.error("Error parsing IP address: #{inspect(bin)}, error: #{inspect(e)}")
+              "0.0.0.0"
+          end
+        other -> 
+          Logger.warning("Unexpected IP address format: #{inspect(other)}")
+          "0.0.0.0"
+      end
+
+      # Extract status
+      status_val = Map.get(status_values, index, 0)
+      status = Map.get(@status_codes, status_val, :unknown)
+
+      # Return the modem map
+      %{mac: mac, ip: ip, status: status}
+    end)
+  end
+
   @doc """
-  Get details for a specific modem by its MAC address.
+  Gets information about a specific modem by MAC address.
 
   ## Parameters
-    * `ip` - IP address of the CMTS
-    * `community` - SNMP community string (read-only)
-    * `mac` - MAC address of the modem (format: "00:11:22:33:44:55")
-    * `port` - SNMP port (default: 161)
+    - `ip`: The IP address of the CMTS
+    - `community`: SNMP community string (default: "public")
+    - `mac_address`: The MAC address of the modem to find
+    - `port`: SNMP port (default: 161)
 
   ## Returns
-    * `{:ok, %{mac: String.t, ip: String.t, status: atom, uptime: integer}}` - Modem details
-    * `{:error, :not_found}` - If modem is not found
-    * `{:error, reason}` - If the operation fails
+    - `{:ok, modem()}` if the modem is found
+    - `{:error, :not_found}` if the modem is not found
+    - `{:error, reason}` on other errors
   """
-  @spec get_modem(String.t, String.t, String.t, :inet.port_number) ::
-        {:ok, map} | {:error, atom | any}
-  def get_modem(ip, community, mac, port \\ 161) do
+  @spec get_modem(ip_address, community, String.t(), port_number) ::
+          {:ok, modem()} | {:error, :not_found} | {:error, any()}
+  def get_modem(ip, community \\ @default_community, mac_address, port \\ @default_snmp_port) do
     case discover_modems(ip, community, port) do
       {:ok, modems} ->
-        case Enum.find(modems, &(&1.mac == format_mac(mac))) do
+        case Enum.find(modems, fn m -> String.downcase(m.mac) == String.downcase(mac_address) end) do
           nil -> {:error, :not_found}
           modem -> {:ok, modem}
         end
-      error ->
-        error
+      {:error, reason} ->
+        {:error, reason}
     end
   end
-
-  # Private functions
-
-  defp process_modems(indices, macs, ips, statuses, uptimes) do
-    # Pair up the values by index
-    modems = Enum.zip_with([indices, macs, ips, statuses, uptimes], fn
-      [%{value: _index}, %{value: mac}, %{value: ip}, %{value: status}, %{value: uptime} | _] ->
-        %{
-          mac: format_mac(mac),
-          ip: format_ip(ip),
-          status: status_to_atom(status),
-          uptime: uptime
-        }
-      _ ->
-        nil
-    end)
-
-    {:ok, Enum.reject(modems, &is_nil/1)}
-  end
-
-  defp format_mac(mac) when is_binary(mac) do
-    mac
-    |> String.replace(~r/[^0-9a-fA-F]/, "")
-    |> String.downcase()
-    |> String.graphemes()
-    |> Enum.chunk_every(2)
-    |> Enum.map(&Enum.join/1)
-    |> Enum.join(":")
-  end
-
-  defp format_mac(mac) when is_list(mac) do
-    mac
-    |> Enum.map(&Integer.to_string(&1, 16) |> String.pad_leading(2, "0"))
-    |> Enum.join(":")
-    |> String.downcase()
-  end
-
-  defp format_ip(ip) when is_tuple(ip) do
-    ip |> Tuple.to_list() |> Enum.join(".")
-  end
-
-  defp format_ip(ip) when is_binary(ip) do
-    ip
-  end
-
-  defp status_to_atom(@cm_status_online), do: :online
-  defp status_to_atom(@cm_status_offline), do: :offline
-  defp status_to_atom(_), do: :unknown
 
   @doc """
   Convert uptime in hundredths of seconds to a human-readable string.
+
+  ## Examples
+      iex> FirmwareManager.CMTSSNMP.format_uptime(0)
+      "0 seconds"
+
+      iex> FirmwareManager.CMTSSNMP.format_uptime(100)
+      "1 second"
+
+      iex> FirmwareManager.CMTSSNMP.format_uptime(6000)
+      "1 minute, 0 seconds"
+
+      iex> FirmwareManager.CMTSSNMP.format_uptime(366100)
+      "1 hour, 1 minute, 1 second"
   """
-  @spec format_uptime(integer) :: String.t
-  def format_uptime(hundredths) when is_integer(hundredths) and hundredths >= 0 do
+  @spec format_uptime(integer()) :: String.t()
+  def format_uptime(hundredths) when is_integer(hundredths) do
     seconds = div(hundredths, 100)
-
     days = div(seconds, 86_400)
-    seconds_remaining = rem(seconds, 86_400)
+    hours = div(rem(seconds, 86_400), 3_600)
+    minutes = div(rem(seconds, 3_600), 60)
+    seconds = rem(seconds, 60)
 
-    hours = div(seconds_remaining, 3_600)
-    seconds_remaining = rem(seconds_remaining, 3_600)
+    parts = []
 
-    minutes = div(seconds_remaining, 60)
-    seconds_remaining = rem(seconds_remaining, 60)
+    # Add each time part if greater than 0
+    parts = if days > 0, do: ["#{days} day#{plural(days)}" | parts], else: parts
+    parts = if hours > 0, do: ["#{hours} hour#{plural(hours)}" | parts], else: parts
+    parts = if minutes > 0, do: ["#{minutes} minute#{plural(minutes)}" | parts], else: parts
 
-    cond do
-      days > 0 -> "#{days}d #{hours}h"
-      hours > 0 -> "#{hours}h #{minutes}m"
-      minutes > 0 -> "#{minutes}m #{seconds_remaining}s"
-      true -> "#{seconds_remaining}s"
+    # Always show seconds if we have minutes or hours
+    parts = if length(parts) > 0 do
+      ["#{seconds} second#{plural(seconds)}" | parts]
+    else
+      # Only show seconds if they're non-zero or it's the only part
+      if seconds > 0 or parts == [] do
+        ["#{seconds} second#{plural(seconds)}" | parts]
+      else
+        parts
+      end
     end
+
+    # If still empty, it means everything was 0
+    parts = if parts == [], do: ["0 seconds"], else: parts
+
+    parts
+    |> Enum.reverse()
+    |> Enum.join(", ")
   end
 
-  def format_uptime(_), do: "unknown"
+  # Helper function to handle pluralization
+  @spec plural(integer()) :: String.t()
+  defp plural(1), do: ""
+  defp plural(_), do: "s"
 end

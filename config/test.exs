@@ -33,3 +33,20 @@ config :phoenix, :plug_init_mode, :runtime
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
+
+# SNMP Configuration for testing
+# config :snmp,
+  # agent: [
+  #   versions: [:v2c, :v3],
+  #   db_dir: ~c"priv/snmp/agent/db",
+  #   agent_type: :master,
+  #   agent_verbosity: :silence,
+  #   config: [
+  #     dir: ~c"priv/snmp/agent/conf",
+  #     db_dir: ~c"priv/snmp/agent/db",
+  #     verbosity: :silence
+  #   ]
+  # ],
+  # manager: [
+  #   server: [verbosity: :silence]
+  # ]

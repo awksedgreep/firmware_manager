@@ -49,6 +49,29 @@ config :firmware_manager,
   ecto_repos: [FirmwareManager.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# SNMP Configuration
+#config :snmp,
+  # agent: [
+  #   versions: [:v1, :v2, :v3],
+  #   db_dir: ~c"priv/mibs",
+  #   server: [],
+  #   config: [
+  #     dir: ~c"priv/conf",
+  #     db_dir: ~c"priv/db",
+  #     db_init_error: :stop,
+  #     repair: false,
+  #     verbosity: :silence
+  #   ]
+  # ],
+  # manager: [
+  #   server: [verbosity: :silence],
+  #   config: [
+  #     dir: ~c"priv/conf",
+  #     db_dir: ~c"priv/db",
+  #     verbosity: :silence
+  #   ]
+  # ]
+
 # Configures the endpoint
 config :firmware_manager, FirmwareManagerWeb.Endpoint,
   url: [host: "localhost"],

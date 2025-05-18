@@ -3,6 +3,7 @@ defmodule FirmwareManagerWeb.PageControllerTest do
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Peace of mind from prototype to production"
+    # Check for the Firmware Manager title instead of the default Phoenix text
+    assert html_response(conn, 200) =~ "Firmware Manager"
   end
 end

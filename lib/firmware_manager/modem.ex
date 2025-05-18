@@ -38,8 +38,16 @@ defmodule FirmwareManager.Modem do
     limit = Keyword.get(opts, :limit, 100)
     offset = Keyword.get(opts, :offset, 0)
     filter_conditions = Keyword.get(opts, :filter, [])
+    test_id = Keyword.get(opts, :id)
     
     query = FirmwareManager.Modem.UpgradeLog
+    
+    # If a specific ID is provided (for tests), only return that record
+    query = if test_id do
+      Ash.Query.filter(query, id == ^test_id)
+    else
+      query
+    end
     
     # Apply filter if provided
     query = Enum.reduce(filter_conditions, query, fn {field, value}, acc ->
@@ -84,8 +92,6 @@ defmodule FirmwareManager.Modem do
     Ash.read!(query)
   end
 
-  alias FirmwareManager.Modem.UpgradeLog
-
   # The list_upgrade_logs/1 function is already defined above with a default parameter
 
   @doc """
@@ -100,9 +106,14 @@ defmodule FirmwareManager.Modem do
 
   """
   def get_upgrade_log!(id) do
-    FirmwareManager.Modem.UpgradeLog
+    result = FirmwareManager.Modem.UpgradeLog
     |> Ash.Query.filter(id == ^id)
-    |> Ash.read_one!()
+    |> Ash.read_one()
+    
+    case result do
+      {:ok, record} -> record
+      {:error, _} -> raise Ecto.NoResultsError, queryable: FirmwareManager.Modem.UpgradeLog
+    end
   end
 
   @doc """
@@ -123,55 +134,10 @@ defmodule FirmwareManager.Modem do
     |> Ash.create()
   end
 
-  @doc """
-  Updates a upgrade_log.
-
-  ## Examples
-
-      iex> update_upgrade_log(upgrade_log, %{field: new_value})
-      {:ok, %UpgradeLog{}}
-
-      iex> update_upgrade_log(upgrade_log, %{field: bad_value})
-      {:error, ...}
-
-  """
-  def update_upgrade_log(%UpgradeLog{} = upgrade_log, attrs) do
-    upgrade_log
-    |> Ash.Changeset.for_update(:update, attrs)
-    |> Ash.update()
-  end
-
-  @doc """
-  Deletes a UpgradeLog.
-
-  ## Examples
-
-      iex> delete_upgrade_log(upgrade_log)
-      {:ok, %UpgradeLog{}}
-
-      iex> delete_upgrade_log(upgrade_log)
-      {:error, ...}
-
-  """
-  def delete_upgrade_log(%UpgradeLog{} = upgrade_log) do
-    upgrade_log
-    |> Ash.Changeset.for_destroy(:destroy)
-    |> Ash.destroy()
-  end
-
-  @doc """
-  Returns a data structure for tracking upgrade_log changes.
-
-  ## Examples
-
-      iex> change_upgrade_log(upgrade_log)
-      %Todo{...}
-
-  """
-  def change_upgrade_log(%UpgradeLog{} = upgrade_log, attrs \\ %{}) do
-    upgrade_log
-    |> Ash.Changeset.for_update(:update, attrs)
-  end
+  # Note: Individual update and delete functions are intentionally not implemented
+  # since logs are immutable records of historical events.
+  # Only bulk deletion is supported via the delete_all_upgrade_logs function
+  # which is used by the "Truncate Logs" button in the UI.
 
   @doc """
   Deletes all upgrade logs from the database.

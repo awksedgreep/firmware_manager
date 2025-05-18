@@ -33,7 +33,6 @@ defmodule FirmwareManager.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:snmp_ex, "~> 0.7.0"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:mishka_chelekom, "~> 0.0", only: [:dev]},
       {:live_debugger, "~> 0.1", only: [:dev]},
@@ -69,7 +68,8 @@ defmodule FirmwareManager.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
       {:tidewave, "~> 0.1", only: :dev},
-      {:faker, "~> 0.18", only: [:dev, :test]}
+      {:faker, "~> 0.18", only: [:dev, :test]},
+      {:snmp_ex, "~> 0.7"}
     ]
   end
 

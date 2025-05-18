@@ -11,11 +11,16 @@ defmodule FirmwareManager.Modem.UpgradeLog do
   end
 
   actions do
-    defaults [:create]
+    defaults []
     
     read :read do
       primary? true
       pagination keyset?: true, required?: false
+    end
+    
+    create :create do
+      accept [:mac_address, :old_sysdescr, :new_sysdescr, :new_firmware, :upgraded_at]
+      primary? true
     end
   end
 

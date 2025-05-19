@@ -1,5 +1,5 @@
 defmodule FirmwareManagerWeb.PageControllerTest do
-  use FirmwareManagerWeb.ConnCase
+  use FirmwareManagerWeb.ConnCase, async: true
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")

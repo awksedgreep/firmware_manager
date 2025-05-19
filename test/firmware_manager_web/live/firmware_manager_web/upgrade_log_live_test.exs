@@ -1,5 +1,5 @@
 defmodule FirmwareManagerWeb.FirmwareManagerWeb.UpgradeLogLiveTest do
-  use FirmwareManagerWeb.ConnCase
+  use FirmwareManagerWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import FirmwareManager.ModemFixtures

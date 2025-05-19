@@ -19,3 +19,14 @@ config :logger, level: :info
 
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.
+
+# SNMP Configuration to silence MIB compilation warnings
+config :snmp_ex,
+  timeout: 5000,
+  max_repetitions: 10,
+  engine_discovery_timeout: 1000,
+  mib_cache:      "priv/snmp/mibs",
+  snmp_conf_dir:  "priv/snmp/conf",
+  snmpm_conf_dir: "priv/snmp",
+  snmpc_verbosity: "silence",
+  mib_sources: []

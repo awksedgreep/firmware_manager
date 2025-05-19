@@ -80,3 +80,14 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# SNMP Configuration to silence MIB compilation warnings
+config :snmp_ex,
+  timeout: 5000,
+  max_repetitions: 10,
+  engine_discovery_timeout: 1000,
+  mib_cache:      "priv/snmp/mibs",
+  snmp_conf_dir:  "priv/snmp/conf",
+  snmpm_conf_dir: "priv/snmp",
+  snmpc_verbosity: "silence",
+  mib_sources: []

@@ -15,6 +15,10 @@ defmodule FirmwareManager.SNMPSimHelper do
   Returns :ok if successful, or an error tuple if it fails.
   """
   def start_snmpsim do
+    # Create empty MIB directory if it doesn't exist
+    mib_dir = Path.join([File.cwd!(), "priv", "snmp", "mibs"])
+    File.mkdir_p!(mib_dir)
+    
     # Always stop any existing container first to ensure clean state
     stop_snmpsim()
     # Wait a moment for port to be released

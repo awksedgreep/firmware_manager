@@ -35,18 +35,12 @@ config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
 # SNMP Configuration for testing
-# config :snmp,
-  # agent: [
-  #   versions: [:v2c, :v3],
-  #   db_dir: ~c"priv/snmp/agent/db",
-  #   agent_type: :master,
-  #   agent_verbosity: :silence,
-  #   config: [
-  #     dir: ~c"priv/snmp/agent/conf",
-  #     db_dir: ~c"priv/snmp/agent/db",
-  #     verbosity: :silence
-  #   ]
-  # ],
-  # manager: [
-  #   server: [verbosity: :silence]
-  # ]
+config :snmp_ex,
+  timeout: 5000,
+  max_repetitions: 10,
+  engine_discovery_timeout: 1000,
+  mib_cache:      "priv/snmp/mibs",
+  snmp_conf_dir:  "priv/snmp/conf",
+  snmpm_conf_dir: "priv/snmp",
+  snmpc_verbosity: "silence",
+  mib_sources: []

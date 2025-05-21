@@ -39,7 +39,7 @@
     <thead class="text-sm text-left leading-6 text-gray-400">
       <tr>
         <%= for option <- @sort_options do %>
-          <th class="p-0 pb-4 pr-6 font-normal">
+          <th class={["p-0 pb-4 pr-6 font-normal", column_width_class(option.field)]}>
             <div class="flex items-center cursor-pointer" phx-click="sort" phx-value-field={option.field}>
               <%= option.label %>
               <%= if @sort_by == option.field do %>
@@ -63,13 +63,13 @@
     <tbody
       id="upgrade_logs"
       phx-update="stream"
-      class="relative divide-y divide-zinc-800 border-t border-zinc-700 text-sm leading-6 text-gray-300"
+      class="relative divide-y divide-zinc-800 border-t border-zinc-700 text-[10px] leading-4 text-gray-300 font-mono"
     >
       <tr :for={{id, upgrade_log} <- @streams.upgrade_logs} id={id} class="group hover:bg-zinc-800">
         <td class="relative p-0">
           <div class="block py-4 pr-6">
             <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800 sm:rounded-l-xl" />
-            <span class="relative font-semibold text-gray-100">
+            <span class="relative text-gray-300">
               <%= upgrade_log.mac_address %>
             </span>
           </div>
@@ -79,8 +79,8 @@
             <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800" />
             <span class="relative">
               <div class="max-w-xs truncate" title={upgrade_log.old_sysdescr}>
-                <%= if String.length(upgrade_log.old_sysdescr) > 35 do %>
-                  <%= String.slice(upgrade_log.old_sysdescr, 0, 32) <> "..." %>
+                <%= if String.length(upgrade_log.old_sysdescr) > 120 do %>
+                  <%= String.slice(upgrade_log.old_sysdescr, 0, 117) <> "..."%>
                 <% else %>
                   <%= upgrade_log.old_sysdescr %>
                 <% end %>
@@ -93,8 +93,8 @@
             <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800" />
             <span class="relative">
               <div class="max-w-xs truncate" title={upgrade_log.new_sysdescr}>
-                <%= if String.length(upgrade_log.new_sysdescr) > 35 do %>
-                  <%= String.slice(upgrade_log.new_sysdescr, 0, 32) <> "..." %>
+                <%= if String.length(upgrade_log.new_sysdescr) > 120 do %>
+                  <%= String.slice(upgrade_log.new_sysdescr, 0, 117) <> "..."%>
                 <% else %>
                   <%= upgrade_log.new_sysdescr %>
                 <% end %>

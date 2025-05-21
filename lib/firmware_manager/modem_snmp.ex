@@ -38,7 +38,7 @@ defmodule FirmwareManager.ModemSNMP do
     * `{:error, reason}` - If the operation fails
   """
   def check_upgrade_capability(ip, community, port \\ 1161) do
-    credential = SNMP.credential(%{version: :v2c, community: community})
+    credential = SNMP.credential(%{version: :v2, community: community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 
     varbinds = [
@@ -71,7 +71,7 @@ defmodule FirmwareManager.ModemSNMP do
   end
 
   def get_modem_info(ip, community, port \\ 1161) when is_binary(ip) and is_binary(community) do
-    credential = SNMP.credential(%{version: :v2c, community: community})
+    credential = SNMP.credential(%{version: :v2, community: community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 
     # Get basic system info
@@ -129,7 +129,7 @@ defmodule FirmwareManager.ModemSNMP do
   def upgrade_firmware(ip, write_community, tftp_server, firmware_file, port \\ 1161)
       when is_binary(ip) and is_binary(write_community) and
            is_binary(tftp_server) and is_binary(firmware_file) do
-    credential = SNMP.credential(%{version: :v2c, community: write_community})
+    credential = SNMP.credential(%{version: :v2, community: write_community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 
     # First verify upgrade is allowed
@@ -191,7 +191,7 @@ defmodule FirmwareManager.ModemSNMP do
     * `{:error, reason}` - If the operation fails
   """
   def get_upgrade_status(ip, community, port \\ 1161) do
-    credential = SNMP.credential(%{version: :v2c, community: community})
+    credential = SNMP.credential(%{version: :v2, community: community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 
     case SNMP.request(%{

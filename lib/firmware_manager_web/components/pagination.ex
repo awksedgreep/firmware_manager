@@ -133,7 +133,7 @@ defmodule FirmwareManagerWeb.Components.Pagination do
 
       <.item_button
         :if={@rest[:show_edges]}
-        on_action={{"first", @on_next}}
+        on_action={{"first", @on_first}}
         page={{nil, @active}}
         params={@params}
         icon={@first_label}

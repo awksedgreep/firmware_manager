@@ -50,9 +50,8 @@ defmodule FirmwareManagerWeb.UpgradeLogLive.Index do
     # Calculate offset for pagination
     offset = (page - 1) * page_size
 
-    # Get total count for pagination using a count query without limit
-    total_query = FirmwareManager.Modem.list_upgrade_logs(limit: :infinity)
-    total_entries = Enum.count(total_query)
+    # Get total count for pagination using an efficient database count query
+    total_entries = FirmwareManager.Repo.aggregate(FirmwareManager.Modem.UpgradeLog, :count, :id)
     total_pages = ceil(total_entries / page_size)
 
     # Get paginated data

@@ -57,7 +57,7 @@ defmodule FirmwareManager.CMTSSNMP do
   @spec discover_modems(ip_address, community, port_number) :: {:ok, [modem()]} | {:error, any()}
   def discover_modems(ip, community \\ @default_community, port \\ @default_snmp_port) do
     # Set up SNMP credential and URI
-    credential = SNMP.credential(%{version: :v2c, community: community})
+    credential = SNMP.credential(%{version: :v2, community: community})
     uri = URI.parse("snmp://#{ip}:#{port}")
 
     # Only walk the columns we need: MAC addresses, status values, and IP addresses

@@ -1,11 +1,12 @@
-# Start SNMP simulator for all tests
-IO.puts("Starting SNMPSIM for all tests...")
-:ok = FirmwareManager.SNMPSimHelper.start_snmpsim()
+# Start SNMP simulator for all tests using snmpkit
+require Logger
+Logger.info("Starting snmpkit simulator for all tests...")
+:ok = FirmwareManager.SnmpKitSimHelper.start_sim()
 
 # Register cleanup to happen after all tests
 ExUnit.after_suite(fn _ ->
-  IO.puts("Stopping SNMPSIM after all tests...")
-  FirmwareManager.SNMPSimHelper.stop_snmpsim()
+  Logger.info("Stopping snmpkit simulator after all tests...")
+  FirmwareManager.SnmpKitSimHelper.stop_sim()
 end)
 
 # Start ExUnit with excluded tags

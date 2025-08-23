@@ -19,7 +19,7 @@ defmodule FirmwareManager.Modem.UpgradeLog do
     end
     
     create :create do
-      accept [:mac_address, :old_sysdescr, :new_sysdescr, :new_firmware, :upgraded_at]
+      accept [:mac_address, :old_sysdescr, :new_sysdescr, :new_firmware, :upgraded_at, :rule_id]
       primary? true
     end
   end
@@ -47,6 +47,9 @@ defmodule FirmwareManager.Modem.UpgradeLog do
 
     # New firmware version
     attribute :new_firmware, :string, allow_nil?: false
+
+    # Optional rule that triggered this upgrade (for auditing)
+    attribute :rule_id, :uuid, allow_nil?: true
 
     # Timestamp of the upgrade
     attribute :upgraded_at, :utc_datetime, default: &DateTime.utc_now/0, allow_nil?: false, sortable?: true

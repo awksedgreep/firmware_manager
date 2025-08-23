@@ -32,6 +32,14 @@ defmodule FirmwareManagerWeb.Router do
     live "/upgrade_logs/:id", UpgradeLogLive.Show, :show
     live "/upgrade_logs/:id/show/edit", UpgradeLogLive.Show, :edit
 
+    # Upgrades Planner (multi-CMTS)
+    live "/upgrades", UpgradesLive, :index
+
+    # Upgrade Rules CRUD
+    live "/upgrade_rules", UpgradeRuleLive.Index, :index
+    live "/upgrade_rules/new", UpgradeRuleLive.Index, :new
+    live "/upgrade_rules/:id/edit", UpgradeRuleLive.Index, :edit
+
     # CMTS routes
     live "/cmts", CmtsLive.Index, :index
     live "/cmts/new", CmtsLive.Index, :new

@@ -19,11 +19,11 @@ defmodule FirmwareManager.Modem.Cmts do
     end
 
     create :create do
-      accept [:name, :ip, :snmp_read, :modem_snmp_read, :modem_snmp_write]
+      accept [:name, :ip, :snmp_read, :snmp_port, :modem_snmp_read, :modem_snmp_write, :virtual, :modem_count]
     end
 
     update :update do
-      accept [:name, :ip, :snmp_read, :modem_snmp_read, :modem_snmp_write]
+      accept [:name, :ip, :snmp_read, :snmp_port, :modem_snmp_read, :modem_snmp_write, :virtual, :modem_count]
     end
     
     destroy :destroy do
@@ -44,11 +44,20 @@ defmodule FirmwareManager.Modem.Cmts do
     # SNMP read community string for the CMTS
     attribute :snmp_read, :string, allow_nil?: false
 
+    # SNMP port for CMTS SNMP operations (defaults to 161 for real CMTS; non-standard when virtual)
+    attribute :snmp_port, :integer, allow_nil?: false, default: 161
+
     # SNMP read community string for modems
     attribute :modem_snmp_read, :string, allow_nil?: false
 
     # SNMP write community string for modems
     attribute :modem_snmp_write, :string, allow_nil?: false
+
+    # Whether this CMTS is simulated via snmpkit
+    attribute :virtual, :boolean, allow_nil?: false, default: false
+
+    # Number of simulated modems to populate in virtual mode
+    attribute :modem_count, :integer, allow_nil?: false, default: 4
 
     # Timestamps for creation and updates
     timestamps()

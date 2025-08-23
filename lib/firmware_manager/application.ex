@@ -12,12 +12,18 @@ defmodule FirmwareManager.Application do
       FirmwareManager.Repo,
       {Ecto.Migrator,
        repos: Application.fetch_env!(:firmware_manager, :ecto_repos), skip: skip_migrations?()},
+      # Start virtual CMTS simulators for DB entries marked as virtual
+      FirmwareManager.SNMP.SimBoot,
+      # Dynamic supervisor to manage optional, disable-able background workers (e.g., upgrade scheduler)
+      {DynamicSupervisor, name: FirmwareManager.UpgradeSupervisor, strategy: :one_for_one},
+      # Boot hook to optionally enable the upgrade scheduler based on config
+      FirmwareManager.UpgradeBoot,
+      # Daily log retention worker
+      FirmwareManager.LogRetention,
       {DNSCluster, query: Application.get_env(:firmware_manager, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: FirmwareManager.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: FirmwareManager.Finch},
-      # Start a worker by calling: FirmwareManager.Worker.start_link(arg)
-      # {FirmwareManager.Worker, arg},
       # Start to serve requests, typically the last entry
       FirmwareManagerWeb.Endpoint
     ]

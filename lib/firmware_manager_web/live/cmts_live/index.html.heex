@@ -64,6 +64,11 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </.link>
+                <.link navigate={~p"/cmts/#{cmts}?discover=1"} class="text-indigo-400 hover:text-indigo-300 mr-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 5C5 5 2 12 2 12s3 7 10 7 10-7 10-7-3-7-10-7Zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"/>
+                  </svg>
+                </.link>
                 <button 
                   phx-click="delete_cmts"
                   phx-value-id={cmts.id}

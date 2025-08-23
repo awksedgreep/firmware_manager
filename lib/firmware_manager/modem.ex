@@ -134,6 +134,21 @@ defmodule FirmwareManager.Modem do
     |> Ash.create()
   end
 
+  @doc """
+  Returns true if there exists a log entry for the given MAC upgraded to the given firmware.
+  """
+  @spec upgrade_log_exists?(String.t(), String.t()) :: boolean()
+  def upgrade_log_exists?(mac, firmware) when is_binary(mac) and is_binary(firmware) do
+    FirmwareManager.Modem.UpgradeLog
+    |> Ash.Query.filter(mac_address == ^mac and new_firmware == ^firmware)
+    |> Ash.Query.limit(1)
+    |> Ash.read!()
+    |> case do
+      [] -> false
+      _ -> true
+    end
+  end
+
   # Note: Individual update and delete functions are intentionally not implemented
   # since logs are immutable records of historical events.
   # Only bulk deletion is supported via the delete_all_upgrade_logs function
@@ -153,6 +168,18 @@ defmodule FirmwareManager.Modem do
   def delete_all_upgrade_logs do
     # Use a direct SQL approach since we're deleting all records
     FirmwareManager.Repo.delete_all(FirmwareManager.Modem.UpgradeLog)
+  end
+
+  @doc """
+  Deletes upgrade logs older than the given cutoff datetime.
+  """
+  @spec delete_old_upgrade_logs(DateTime.t()) :: {integer(), nil}
+  import Ecto.Query, only: [from: 2]
+
+  def delete_old_upgrade_logs(%DateTime{} = cutoff) do
+    FirmwareManager.Modem.UpgradeLog
+    |> Ash.Query.filter(upgraded_at < ^cutoff)
+    |> Ash.destroy!()
   end
 
   # CMTS CRUD Operations

@@ -1,13 +1,13 @@
-defmodule FirmwareManager.SNMPSimTest do
+defmodule FirmwareManager.SnmpKitSimTest do
   use ExUnit.Case, async: false
   alias FirmwareManager.CMTSSNMP
 
   @moduletag :snmp
 
-  # SNMPSIM is now started once globally in FirmwareManager.GlobalSetup
+  # The snmpkit simulator is started once globally in test/test_helper.exs
 
   test "can discover modems from CMTS" do
-    port = FirmwareManager.SNMPSimHelper.get_snmpsim_port()
+    port = FirmwareManager.SnmpKitSimHelper.get_port()
     assert {:ok, modems} = CMTSSNMP.discover_modems("127.0.0.1", "public", port)
     assert is_list(modems)
     assert length(modems) > 0
@@ -24,7 +24,7 @@ defmodule FirmwareManager.SNMPSimTest do
   end
 
   test "can get individual modem by MAC" do
-    port = FirmwareManager.SNMPSimHelper.get_snmpsim_port()
+    port = FirmwareManager.SnmpKitSimHelper.get_port()
     # First get a known MAC from discovery
     {:ok, [%{mac: mac} | _]} = CMTSSNMP.discover_modems("127.0.0.1", "public", port)
 
@@ -34,7 +34,7 @@ defmodule FirmwareManager.SNMPSimTest do
   end
 
   test "returns not_found for unknown MAC" do
-    port = FirmwareManager.SNMPSimHelper.get_snmpsim_port()
+    port = FirmwareManager.SnmpKitSimHelper.get_port()
     assert {:error, :not_found} = CMTSSNMP.get_modem("127.0.0.1", "public", "00:00:00:00:00:00", port)
   end
 end

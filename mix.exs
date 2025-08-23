@@ -69,7 +69,7 @@ defmodule FirmwareManager.MixProject do
       {:bandit, "~> 1.5"},
       {:tidewave, "~> 0.1", only: :dev},
       {:faker, "~> 0.18", only: [:dev, :test]},
-      {:snmp_ex, "~> 0.7"}
+      {:snmpkit, "~> 0.6.3"}
     ]
   end
 

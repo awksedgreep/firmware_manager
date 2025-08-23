@@ -34,13 +34,3 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
-# SNMP Configuration for testing
-config :snmp_ex,
-  timeout: 5000,
-  max_repetitions: 10,
-  engine_discovery_timeout: 1000,
-  mib_cache:      "priv/snmp/mibs",
-  snmp_conf_dir:  "priv/snmp/conf",
-  snmpm_conf_dir: "priv/snmp",
-  snmpc_verbosity: "silence",
-  mib_sources: []

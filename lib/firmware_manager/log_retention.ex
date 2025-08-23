@@ -3,8 +3,6 @@ defmodule FirmwareManager.LogRetention do
   use GenServer
   require Logger
 
-  @interval_ms :timer.hours(24)
-
   def start_link(_args) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end

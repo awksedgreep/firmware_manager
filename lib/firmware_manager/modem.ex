@@ -174,13 +174,13 @@ defmodule FirmwareManager.Modem do
   Deletes upgrade logs older than the given cutoff datetime.
   """
   @spec delete_old_upgrade_logs(DateTime.t()) :: {integer(), nil}
-  import Ecto.Query, only: [from: 2]
-
   def delete_old_upgrade_logs(%DateTime{} = cutoff) do
     FirmwareManager.Modem.UpgradeLog
     |> Ash.Query.filter(upgraded_at < ^cutoff)
     |> Ash.destroy!()
   end
+
+  # CMTS CRUD Operations
 
   # CMTS CRUD Operations
 

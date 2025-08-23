@@ -81,7 +81,6 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
   end
 
   @impl true
-  @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     rule = UpgradeAPI.get_rule!(id)
     {:ok, _} = UpgradeAPI.delete_rule(rule)
@@ -136,7 +135,6 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
     end
   end
 
-  @impl true
   # Convert string params from the form into the atom-keyed attrs Ash expects.
   defp sanitize_rule_params(params) when is_map(params) do
     %{
@@ -160,7 +158,7 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
   defp truthy?(true), do: true
   defp truthy?(_), do: false
 
-  defp error_message(%{errors: errors} = _changeset, fallback) when is_list(errors) and errors != [] do
+  defp error_message(%{errors: errors} = _changeset, _fallback) when is_list(errors) and errors != [] do
     # Build a simple readable message from Ash error structs
     formatted =
       errors
@@ -176,6 +174,7 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
 
   defp error_message(_changeset, fallback), do: fallback
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="space-y-6">

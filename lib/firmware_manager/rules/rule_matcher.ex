@@ -48,7 +48,6 @@ defmodule FirmwareManager.Rules.RuleMatcher do
   """
   @spec plan_upgrades(map(), plan_opts()) :: {:ok, [map()]} | {:error, any()}
   def plan_upgrades(%{ip: cmts_ip} = cmts, %{firmware_file: fw_file} = opts) when is_binary(fw_file) do
-    t = "#{cmts_ip}:#{cmts.snmp_port || 161}"
     read_comm = cmts.modem_snmp_read || cmts.snmp_read || "public"
 
     with {:ok, mods} <- CMTSSNMP.discover_modems(cmts_ip, read_comm, cmts.snmp_port || 161) do
@@ -137,7 +136,7 @@ defmodule FirmwareManager.Rules.RuleMatcher do
   Returns {:ok, results} where results is a list of %{mac, result, final_status} or {:error, reason}.
   """
   @spec apply_plan(map(), [map()], keyword()) :: {:ok, [map()]} | {:error, any()}
-  def apply_plan(%{} = _cmts, plan, opts \\ []) when is_list(plan) do
+  def apply_plan(%{} = cmts, plan, opts \\ []) when is_list(plan) do
     # Dry-run: return the plan annotated, without executing
     if opts[:dry_run] do
       preview =
@@ -147,7 +146,6 @@ defmodule FirmwareManager.Rules.RuleMatcher do
 
       {:ok, preview}
     else
-      cmts = _cmts
       concurrency = opts[:concurrency] || min(8, System.schedulers_online())
       poll_ms = opts[:poll_ms] || 300
       poll_attempts = opts[:poll_attempts] || 50
@@ -173,7 +171,7 @@ defmodule FirmwareManager.Rules.RuleMatcher do
     end
   end
 
-  defp do_apply_item(%{mac: mac, ip: ip, port: port0, tftp_server: tftp, firmware_file: file} = _item, write_comm, read_comm, poll_ms, poll_attempts) do
+  defp do_apply_item(%{mac: mac, ip: ip, port: port0, tftp_server: tftp, firmware_file: file} = item, write_comm, read_comm, poll_ms, poll_attempts) do
     port = port0 || 161
 
     pre_sysdescr =
@@ -202,7 +200,7 @@ defmodule FirmwareManager.Rules.RuleMatcher do
                 {:ok, %{system_description: d}} -> to_string(d)
                 _ -> pre_sysdescr
               end
-            _ = Modem.create_upgrade_log(%{mac_address: mac, old_sysdescr: pre_sysdescr, new_sysdescr: post_sysdescr, new_firmware: to_string(file), rule_id: Map.get(_item, :rule_id)})
+            _ = Modem.create_upgrade_log(%{mac_address: mac, old_sysdescr: pre_sysdescr, new_sysdescr: post_sysdescr, new_firmware: to_string(file), rule_id: Map.get(item, :rule_id)})
             %{mac: mac, result: :ok, final_status: final}
 
           other ->

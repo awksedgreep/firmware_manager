@@ -175,63 +175,6 @@ defmodule FirmwareManager.CMTSSNMP do
     end)
   end
 
-  # Combines data from multiple column walks into a list of modem maps.
-  @spec combine_column_data(map(), map(), map()) :: [modem()]
-  defp combine_column_data(mac_addresses, status_values, ip_addresses) do
-    all_indices =
-      [mac_addresses, status_values, ip_addresses]
-      |> Enum.flat_map(&Map.keys/1)
-      |> MapSet.new()
-
-    Enum.map(all_indices, fn index ->
-      mac =
-        case Map.get(mac_addresses, index) do
-          # snmpkit typically returns binaries for OCTET STRINGs
-          bin when is_binary(bin) ->
-            try do
-              bin
-              |> :binary.bin_to_list()
-              |> Enum.map(&Integer.to_string(&1, 16) |> String.pad_leading(2, "0"))
-              |> Enum.join(":")
-            rescue
-              e ->
-                Logger.error("Error parsing MAC address: #{inspect(bin)} error: #{inspect(e)}")
-                "00:00:00:00:00:00"
-            end
-          other ->
-            Logger.warning("Unexpected MAC address format: #{inspect(other)}")
-            "unknown"
-        end
-
-      ip =
-        case Map.get(ip_addresses, index) do
-          bin when is_binary(bin) and byte_size(bin) == 4 ->
-            try do
-              bin |> :binary.bin_to_list() |> Enum.join(".")
-            rescue
-              e ->
-                Logger.error("Error parsing IP address: #{inspect(bin)} error: #{inspect(e)}")
-                "0.0.0.0"
-            end
-          list when is_list(list) ->
-            # Sometimes IPs may already be presented as a list
-            if Enum.all?(list, &is_integer/1) do
-              Enum.join(list, ".")
-            else
-              Logger.warning("Unexpected IP address list format: #{inspect(list)}")
-              "0.0.0.0"
-            end
-          other ->
-            Logger.warning("Unexpected IP address format: #{inspect(other)}")
-            "0.0.0.0"
-        end
-
-      status_val = Map.get(status_values, index, 0)
-      status = Map.get(@status_codes, status_val, :unknown)
-
-      %{mac: mac, ip: ip, status: status}
-    end)
-  end
 
   @doc """
   Gets information about a specific modem by MAC address.

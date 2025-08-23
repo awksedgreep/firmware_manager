@@ -122,6 +122,71 @@ defmodule FirmwareManagerWeb.CmtsLive.Show do
     end
   end
 
+
+
+  @impl true
+  def handle_event("preview_upgrade_plan", params, %{assigns: %{cmts: cmts}} = socket) do
+    mac_rule = Map.get(params, "mac_rule", "")
+    sys_glob = Map.get(params, "sysdescr_glob", "")
+    fw_file = Map.get(params, "firmware_file", "")
+    tftp = Map.get(params, "tftp_server", "")
+
+    if fw_file == "" do
+      {:noreply, assign(socket, upgrade_plan_error: "Firmware file is required", upgrade_plan_preview: [])}
+    else
+      opts = %{
+        firmware_file: fw_file
+      }
+      opts = if mac_rule != "", do: Map.put(opts, :mac_rule, mac_rule), else: opts
+      opts = if sys_glob != "", do: Map.put(opts, :sysdescr_glob, sys_glob), else: opts
+      opts = if tftp != "", do: Map.put(opts, :tftp_server, tftp), else: opts
+
+      case RuleMatcher.plan_upgrades(cmts, opts) do
+        {:ok, plan} ->
+          {:noreply,
+           socket
+           |> assign(:rule_mac, mac_rule)
+           |> assign(:rule_glob, sys_glob)
+           |> assign(:rule_firmware, fw_file)
+           |> assign(:rule_tftp, if(tftp == "", do: Settings.tftp_server(), else: tftp))
+           |> assign(:upgrade_plan_error, nil)
+           |> assign(:upgrade_plan_preview, plan)
+           |> assign(:upgrade_run_results, [])}
+
+        {:error, reason} ->
+          {:noreply, assign(socket, upgrade_plan_error: inspect(reason), upgrade_plan_preview: [], upgrade_run_results: [])}
+      end
+    end
+  end
+
+  @impl true
+  def handle_event("run_upgrade_plan", _params, %{assigns: %{cmts: cmts, upgrade_plan_preview: plan}} = socket) do
+    case RuleMatcher.apply_plan(cmts, plan, concurrency: 4, poll_ms: 300, poll_attempts: 50) do
+      {:ok, results} ->
+        {:noreply, assign(socket, upgrade_run_results: results) |> put_flash(:info, "Upgrade plan executing; results updated.")}
+      other ->
+        {:noreply, assign(socket, upgrade_plan_error: inspect(other))}
+    end
+  end
+
+  @impl true
+  def handle_event("discover_modems", _params, %{assigns: %{cmts: cmts}} = socket) do
+    # If virtual, ensure simulator is running on snmp_port
+    _ = if cmts.virtual, do: Simulator.ensure_cmts_sim(cmts), else: :noop
+
+    port = cmts.snmp_port || 161
+
+    case CMTSSNMP.discover_modems(cmts.ip, cmts.modem_snmp_read, port) do
+      {:ok, modems} ->
+        modems = Simulator.enrich_with_sim_ports(cmts, modems)
+        modems = enrich_with_sysdescr(cmts, modems)
+        {:noreply, assign(socket, discovered_modems: modems, discovery_error: nil)}
+
+      {:error, reason} ->
+        {:noreply,
+         assign(socket, discovered_modems: [], discovery_error: inspect(reason))}
+    end
+  end
   defp poll_and_log_upgrade(mac, ip, port, read_comm, firmware_file, pre_sysdescr) do
     # Poll oper status up to ~15 seconds
     final =
@@ -182,69 +247,5 @@ defmodule FirmwareManagerWeb.CmtsLive.Show do
         end
       Map.put(m, :sysdescr, sys)
     end)
-  end
-
-  @impl true
-  def handle_event("preview_upgrade_plan", params, %{assigns: %{cmts: cmts}} = socket) do
-    mac_rule = Map.get(params, "mac_rule", "")
-    sys_glob = Map.get(params, "sysdescr_glob", "")
-    fw_file = Map.get(params, "firmware_file", "")
-    tftp = Map.get(params, "tftp_server", "")
-
-    if fw_file == "" do
-      {:noreply, assign(socket, upgrade_plan_error: "Firmware file is required", upgrade_plan_preview: [])}
-    else
-      opts = %{
-        firmware_file: fw_file
-      }
-      opts = if mac_rule != "", do: Map.put(opts, :mac_rule, mac_rule), else: opts
-      opts = if sys_glob != "", do: Map.put(opts, :sysdescr_glob, sys_glob), else: opts
-      opts = if tftp != "", do: Map.put(opts, :tftp_server, tftp), else: opts
-
-      case RuleMatcher.plan_upgrades(cmts, opts) do
-        {:ok, plan} ->
-          {:noreply,
-           socket
-           |> assign(:rule_mac, mac_rule)
-           |> assign(:rule_glob, sys_glob)
-           |> assign(:rule_firmware, fw_file)
-           |> assign(:rule_tftp, if(tftp == "", do: Settings.tftp_server(), else: tftp))
-           |> assign(:upgrade_plan_error, nil)
-           |> assign(:upgrade_plan_preview, plan)
-           |> assign(:upgrade_run_results, [])}
-
-        {:error, reason} ->
-          {:noreply, assign(socket, upgrade_plan_error: inspect(reason), upgrade_plan_preview: [], upgrade_run_results: [])}
-      end
-    end
-  end
-
-  @impl true
-  def handle_event("run_upgrade_plan", _params, %{assigns: %{cmts: cmts, upgrade_plan_preview: plan}} = socket) do
-    case RuleMatcher.apply_plan(cmts, plan, concurrency: 4, poll_ms: 300, poll_attempts: 50) do
-      {:ok, results} ->
-        {:noreply, assign(socket, upgrade_run_results: results) |> put_flash(:info, "Upgrade plan executing; results updated." )}
-      {:error, reason} ->
-        {:noreply, assign(socket, upgrade_plan_error: inspect(reason))}
-    end
-  end
-
-  @impl true
-  def handle_event("discover_modems", _params, %{assigns: %{cmts: cmts}} = socket) do
-    # If virtual, ensure simulator is running on snmp_port
-    _ = if cmts.virtual, do: Simulator.ensure_cmts_sim(cmts), else: :noop
-
-    port = cmts.snmp_port || 161
-
-    case CMTSSNMP.discover_modems(cmts.ip, cmts.modem_snmp_read, port) do
-      {:ok, modems} ->
-        modems = Simulator.enrich_with_sim_ports(cmts, modems)
-        modems = enrich_with_sysdescr(cmts, modems)
-        {:noreply, assign(socket, discovered_modems: modems, discovery_error: nil)}
-
-      {:error, reason} ->
-        {:noreply,
-         assign(socket, discovered_modems: [], discovery_error: inspect(reason))}
-    end
   end
 end

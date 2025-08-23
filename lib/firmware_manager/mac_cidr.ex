@@ -1,5 +1,5 @@
 defmodule FirmwareManager.MacCIDR do
-  use Bitwise
+  import Bitwise
   @moduledoc """
   MAC address CIDR/mask matching utilities.
 
@@ -59,6 +59,12 @@ defmodule FirmwareManager.MacCIDR do
   end
 
   @doc """
+  Public API expected by tests: alias of mac_match?/2
+  """
+  @spec match?(String.t() | binary(), rule() | String.t()) :: boolean()
+  def match?(mac, rule), do: mac_match?(mac, rule)
+
+  @doc """
   Filter a list of modem maps like [%{mac: "xx:.."}] by rule.
   """
   @spec filter_modems([map()], rule() | String.t()) :: [map()]
@@ -106,6 +112,7 @@ defmodule FirmwareManager.MacCIDR do
     [a, b, c, d, e, f]
     |> Enum.map(&(Integer.to_string(&1, 16) |> String.pad_leading(2, "0")))
     |> Enum.join(":")
+    |> String.downcase()
   end
 
   # mask can be prefix length (e.g. "24") or explicit hex mask (e.g. "ff:ff:f0:00:00:00")

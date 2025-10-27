@@ -35,20 +35,21 @@ defmodule FirmwareManager.CMTS.SNMPTest do
 
   # Test data
   @test_ip "127.0.0.1"
-  @test_community "public" # Using public community as defined in our SNMPSIM data file
+  # Using public community as defined in our SNMPSIM data file
+  @test_community "public"
 
   # The snmpkit simulator is started once globally in test/test_helper.exs
-  
+
   describe "discover_modems/3" do
     test "discovers modems from SNMPSIM" do
       port = FirmwareManager.SnmpKitSimHelper.get_port()
       {:ok, modems} = CMTSSNMP.discover_modems(@test_ip, @test_community, port)
       assert is_list(modems)
       assert length(modems) > 0
-      
+
       # Verify we have the expected number of modems
       assert length(modems) == 4
-      
+
       # Verify we have both online and offline modems
       statuses = Enum.map(modems, & &1.status)
       assert :online in statuses
@@ -59,15 +60,17 @@ defmodule FirmwareManager.CMTS.SNMPTest do
   describe "get_modem/4" do
     test "returns not_found for unknown MAC address" do
       port = FirmwareManager.SnmpKitSimHelper.get_port()
-      assert {:error, :not_found} = CMTSSNMP.get_modem(@test_ip, @test_community, "00:00:00:00:00:00", port)
+
+      assert {:error, :not_found} =
+               CMTSSNMP.get_modem(@test_ip, @test_community, "00:00:00:00:00:00", port)
     end
-    
+
     test "finds a modem by MAC address" do
       port = FirmwareManager.SnmpKitSimHelper.get_port()
       # First discover modems to get a valid MAC
       {:ok, modems} = CMTSSNMP.discover_modems(@test_ip, @test_community, port)
       %{mac: mac} = hd(modems)
-      
+
       # Then try to get that specific modem
       assert {:ok, modem} = CMTSSNMP.get_modem(@test_ip, @test_community, mac, port)
       assert modem.mac == mac

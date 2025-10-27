@@ -47,8 +47,12 @@ defmodule FirmwareManager.SNMP.PortAllocator do
 
   defp udp_port_available?(port) when is_integer(port) do
     case :gen_udp.open(port, [:binary, {:active, false}]) do
-      {:ok, socket} -> :gen_udp.close(socket); true
-      _ -> false
+      {:ok, socket} ->
+        :gen_udp.close(socket)
+        true
+
+      _ ->
+        false
     end
   end
 end

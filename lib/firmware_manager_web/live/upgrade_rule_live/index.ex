@@ -33,7 +33,7 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
     socket
     |> assign(:page_title, "New Rule")
     |> assign(:rule, %Rule{})
-    |> assign(:changeset, Rule |> Ash.Changeset.for_create(:create, %{}))
+    |> assign(:changeset, nil)
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
@@ -42,7 +42,7 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
     socket
     |> assign(:page_title, "Edit Rule")
     |> assign(:rule, rule)
-    |> assign(:changeset, rule |> Ash.Changeset.for_update(:update, %{}))
+    |> assign(:changeset, nil)
   end
 
   defp load_rules(socket) do
@@ -68,6 +68,7 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
   def handle_event("run", %{"id" => id}, socket) do
     # Shallow integration: push to Upgrades planner with prefilled params via redirect
     rule = UpgradeAPI.get_rule!(id)
+
     params = %{
       "mac_rule" => rule.mac_rule || "",
       "sysdescr_glob" => rule.sysdescr_glob || "",
@@ -90,8 +91,14 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
   @impl true
   def handle_event("scheduler_toggle", _params, socket) do
     enabled = socket.assigns.scheduler_enabled
-    if enabled, do: FirmwareManager.UpgradeBoot.disable(), else: FirmwareManager.UpgradeBoot.enable()
-    {:noreply, assign(socket, :scheduler_enabled, !enabled) |> put_flash(:info, "Scheduler #{if(enabled, do: "disabled", else: "enabled")}.")}
+
+    if enabled,
+      do: FirmwareManager.UpgradeBoot.disable(),
+      else: FirmwareManager.UpgradeBoot.enable()
+
+    {:noreply,
+     assign(socket, :scheduler_enabled, !enabled)
+     |> put_flash(:info, "Scheduler #{if(enabled, do: "disabled", else: "enabled")}.")}
   end
 
   @impl true
@@ -104,7 +111,10 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
 
     ms = secs_int * 1000
     :ok = FirmwareManager.UpgradeBoot.set_interval_ms(ms)
-    {:noreply, assign(socket, :scheduler_interval_secs, secs_int) |> put_flash(:info, "Scheduler interval updated.")}
+
+    {:noreply,
+     assign(socket, :scheduler_interval_secs, secs_int)
+     |> put_flash(:info, "Scheduler interval updated.")}
   end
 
   defp save_rule(socket, :new, params) do
@@ -117,7 +127,15 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
          |> load_rules()}
 
       {:error, changeset} ->
-        {:noreply, socket |> put_flash(:error, error_message(changeset, "Invalid rule: please fill required fields (name, firmware_file)"))}
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           error_message(
+             changeset,
+             "Invalid rule: please fill required fields (name, firmware_file)"
+           )
+         )}
     end
   end
 
@@ -131,7 +149,15 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
          |> load_rules()}
 
       {:error, changeset} ->
-        {:noreply, socket |> put_flash(:error, error_message(changeset, "Invalid rule: please fill required fields (name, firmware_file)"))}
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           error_message(
+             changeset,
+             "Invalid rule: please fill required fields (name, firmware_file)"
+           )
+         )}
     end
   end
 
@@ -158,18 +184,13 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
   defp truthy?(true), do: true
   defp truthy?(_), do: false
 
-  defp error_message(%{errors: errors} = _changeset, _fallback) when is_list(errors) and errors != [] do
-    # Build a simple readable message from Ash error structs
-    formatted =
-      errors
-      |> Enum.map(fn e ->
-        field = Map.get(e, :field) || Map.get(e, :fields) || :unknown
-        message = Map.get(e, :message) || to_string(e.__struct__)
-        "#{inspect(field)}: #{message}"
-      end)
+  defp error_message(%Ecto.Changeset{} = changeset, fallback) do
+    errs =
+      changeset.errors
+      |> Enum.map(fn {field, {msg, _}} -> "#{field}: #{msg}" end)
       |> Enum.join(", ")
 
-    "Invalid rule: " <> formatted
+    if errs == "", do: fallback, else: "Invalid rule: " <> errs
   end
 
   defp error_message(_changeset, fallback), do: fallback
@@ -180,19 +201,36 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
     <div class="space-y-6">
       <.header>
         Upgrade Rules
-        <:subtitle>Persisted rules applied globally. Enable/disable, run now, or create/edit.</:subtitle>
+        <:subtitle>
+          Persisted rules applied globally. Enable/disable, run now, or create/edit.
+        </:subtitle>
         <:actions>
           <div class="flex items-center gap-2">
             <form phx-submit="scheduler_interval" class="flex items-center gap-2">
               <label class="text-sm text-gray-300">Interval (s)</label>
-              <input name="interval_secs" value={@scheduler_interval_secs} class="w-24 rounded-md border-gray-600 bg-gray-700 text-gray-100 text-sm" />
-              <button type="submit" class="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 text-white rounded text-xs">Update</button>
+              <input
+                name="interval_secs"
+                value={@scheduler_interval_secs}
+                class="w-24 rounded-md border-gray-600 bg-gray-700 text-gray-100 text-sm"
+              />
+              <button
+                type="submit"
+                class="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 text-white rounded text-xs"
+              >
+                Update
+              </button>
             </form>
-            <button phx-click="scheduler_toggle" class={"px-2 py-1 rounded text-xs " <> if(@scheduler_enabled, do: "bg-green-700", else: "bg-gray-700")}>
-              <%= if @scheduler_enabled, do: "Scheduler: ON", else: "Scheduler: OFF" %>
+            <button
+              phx-click="scheduler_toggle"
+              class={"px-2 py-1 rounded text-xs " <> if(@scheduler_enabled, do: "bg-green-700", else: "bg-gray-700")}
+            >
+              {if @scheduler_enabled, do: "Scheduler: ON", else: "Scheduler: OFF"}
             </button>
-            <.link patch={if @live_action == :new, do: ~p"/upgrade_rules", else: ~p"/upgrade_rules/new"} class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm">
-              <%= if @live_action == :new, do: "Close", else: "New Rule" %>
+            <.link
+              patch={if @live_action == :new, do: ~p"/upgrade_rules", else: ~p"/upgrade_rules/new"}
+              class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm"
+            >
+              {if @live_action == :new, do: "Close", else: "New Rule"}
             </.link>
           </div>
         </:actions>
@@ -202,7 +240,9 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
         Note: The scheduler and manual runs skip devices that have already been upgraded to the same firmware (MAC + firmware). Use the Upgrades Planner's "Force run" to override when needed.
       </p>
       <p class="text-xs text-gray-400">
-        Tip: Validate your matching criteria on the <a href="/upgrades" class="text-indigo-400 hover:text-indigo-300">Manual Upgrades</a> page with a dry-run, then add it here as a persistent rule.
+        Tip: Validate your matching criteria on the
+        <a href="/upgrades" class="text-indigo-400 hover:text-indigo-300">Manual Upgrades</a>
+        page with a dry-run, then add it here as a persistent rule.
       </p>
 
       <%= if (@live_action in [:new, :edit]) do %>
@@ -210,35 +250,76 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
           <form id="rule-form" phx-submit="save" class="space-y-4">
             <div>
               <label class="block text-sm text-gray-300">Name</label>
-              <input name="rule[name]" value={@rule.name || ""} required class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100" />
+              <input
+                name="rule[name]"
+                value={@rule.name || ""}
+                required
+                class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100"
+              />
             </div>
             <div>
               <label class="block text-sm text-gray-300">Description</label>
-              <textarea name="rule[description]" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100"><%= @rule.description || "" %></textarea>
+              <textarea
+                name="rule[description]"
+                class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100"
+              ><%= @rule.description || "" %></textarea>
             </div>
             <div>
               <label class="block text-sm text-gray-300">MAC Rule</label>
-              <input name="rule[mac_rule]" value={@rule.mac_rule || ""} placeholder="aa:bb:cc:00:00:00/24" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100" />
+              <input
+                name="rule[mac_rule]"
+                value={@rule.mac_rule || ""}
+                placeholder="aa:bb:cc:00:00:00/24"
+                class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100"
+              />
             </div>
             <div>
               <label class="block text-sm text-gray-300">sysDescr Glob</label>
-              <input name="rule[sysdescr_glob]" value={@rule.sysdescr_glob || ""} placeholder="%Arris%5.9.3%" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100" />
+              <input
+                name="rule[sysdescr_glob]"
+                value={@rule.sysdescr_glob || ""}
+                placeholder="%Arris%5.9.3%"
+                class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100"
+              />
             </div>
             <div>
               <label class="block text-sm text-gray-300">Firmware File</label>
-              <input name="rule[firmware_file]" value={@rule.firmware_file || ""} required class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100" />
+              <input
+                name="rule[firmware_file]"
+                value={@rule.firmware_file || ""}
+                required
+                class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100"
+              />
             </div>
             <div>
               <label class="block text-sm text-gray-300">TFTP Server</label>
-              <input name="rule[tftp_server]" value={@rule.tftp_server || ""} placeholder="10.0.0.5" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100" />
+              <input
+                name="rule[tftp_server]"
+                value={@rule.tftp_server || ""}
+                placeholder="10.0.0.5"
+                class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-100"
+              />
             </div>
             <div class="flex items-center">
-              <input type="checkbox" name="rule[enabled]" value="true" checked={@rule.enabled} class="rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500" />
+              <input
+                type="checkbox"
+                name="rule[enabled]"
+                value="true"
+                checked={@rule.enabled}
+                class="rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500"
+              />
               <span class="ml-2 text-sm text-gray-300">Enabled</span>
             </div>
             <div class="pt-2 flex items-center gap-2">
-              <button type="submit" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm">Save Rule</button>
-              <.link patch={~p"/upgrade_rules"} class="text-sm text-gray-300 hover:text-gray-100">Cancel</.link>
+              <button
+                type="submit"
+                class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm"
+              >
+                Save Rule
+              </button>
+              <.link patch={~p"/upgrade_rules"} class="text-sm text-gray-300 hover:text-gray-100">
+                Cancel
+              </.link>
             </div>
           </form>
         </div>
@@ -265,22 +346,46 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
               <%= for rule <- @rules do %>
                 <tr id={"rule-#{rule.id}"}>
                   <td class="py-2">
-                    <div class="font-medium"><%= rule.name %></div>
-                    <div class="text-xs text-gray-400 truncate max-w-xs"><%= rule.description %></div>
+                    <div class="font-medium">{rule.name}</div>
+                    <div class="text-xs text-gray-400 truncate max-w-xs">{rule.description}</div>
                   </td>
-                  <td class="py-2"><%= rule.mac_rule %></td>
-                  <td class="py-2 truncate max-w-xs" title={rule.sysdescr_glob}><%= rule.sysdescr_glob %></td>
-                  <td class="py-2"><%= rule.firmware_file %></td>
-                  <td class="py-2"><%= rule.tftp_server %></td>
+                  <td class="py-2">{rule.mac_rule}</td>
+                  <td class="py-2 truncate max-w-xs" title={rule.sysdescr_glob}>
+                    {rule.sysdescr_glob}
+                  </td>
+                  <td class="py-2">{rule.firmware_file}</td>
+                  <td class="py-2">{rule.tftp_server}</td>
                   <td class="py-2">
-                    <button phx-click="toggle" phx-value-id={rule.id} class={"px-2 py-1 rounded text-xs " <> if(rule.enabled, do: "bg-green-700", else: "bg-gray-700") }>
-                      <%= if rule.enabled, do: "Enabled", else: "Disabled" %>
+                    <button
+                      phx-click="toggle"
+                      phx-value-id={rule.id}
+                      class={"px-2 py-1 rounded text-xs " <> if(rule.enabled, do: "bg-green-700", else: "bg-gray-700") }
+                    >
+                      {if rule.enabled, do: "Enabled", else: "Disabled"}
                     </button>
                   </td>
                   <td class="py-2 text-right">
-                    <.link patch={~p"/upgrade_rules/#{rule.id}/edit"} class="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 text-white rounded text-xs">Edit</.link>
-                    <button phx-click="run" phx-value-id={rule.id} class="ml-2 px-2 py-1 bg-indigo-700 hover:bg-indigo-600 text-white rounded text-xs">Run Now</button>
-                    <button phx-click="delete" phx-value-id={rule.id} data-confirm="Are you sure?" class="ml-2 px-2 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-xs">Delete</button>
+                    <.link
+                      patch={~p"/upgrade_rules/#{rule.id}/edit"}
+                      class="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 text-white rounded text-xs"
+                    >
+                      Edit
+                    </.link>
+                    <button
+                      phx-click="run"
+                      phx-value-id={rule.id}
+                      class="ml-2 px-2 py-1 bg-indigo-700 hover:bg-indigo-600 text-white rounded text-xs"
+                    >
+                      Run Now
+                    </button>
+                    <button
+                      phx-click="delete"
+                      phx-value-id={rule.id}
+                      data-confirm="Are you sure?"
+                      class="ml-2 px-2 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-xs"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               <% end %>
@@ -292,4 +397,3 @@ defmodule FirmwareManagerWeb.UpgradeRuleLive.Index do
     """
   end
 end
-

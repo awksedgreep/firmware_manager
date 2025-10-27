@@ -33,7 +33,12 @@ defmodule FirmwareManager.SnmpKitSimHelper do
             community: "public"
           })
 
-        Application.put_env(@app, @env_key, Map.put(current, :modem, %{device: device, port: port}))
+        Application.put_env(
+          @app,
+          @env_key,
+          Map.put(current, :modem, %{device: device, port: port})
+        )
+
         {:ok, port}
 
       _ ->
@@ -62,7 +67,8 @@ defmodule FirmwareManager.SnmpKitSimHelper do
         Application.put_env(@app, @env_key, Map.delete(env, :modem))
         :ok
 
-      _ -> :ok
+      _ ->
+        :ok
     end
   end
 
@@ -177,16 +183,20 @@ defmodule FirmwareManager.SnmpKitSimHelper do
     %{}
     # docsIf
     |> put_mac("#{base}.2.1", m1)
-    |> put_status("#{base}.6.1", 8) # online
+    # online
+    |> put_status("#{base}.6.1", 8)
     |> put_ip("#{base}.10.1", i1)
     |> put_mac("#{base}.2.2", m2)
-    |> put_status("#{base}.6.2", 2) # offline
+    # offline
+    |> put_status("#{base}.6.2", 2)
     |> put_ip("#{base}.10.2", i2)
     |> put_mac("#{base}.2.3", m3)
-    |> put_status("#{base}.6.3", 5) # ranging_complete
+    # ranging_complete
+    |> put_status("#{base}.6.3", 5)
     |> put_ip("#{base}.10.3", i3)
     |> put_mac("#{base}.2.4", m4)
-    |> put_status("#{base}.6.4", 8) # online
+    # online
+    |> put_status("#{base}.6.4", 8)
     |> put_ip("#{base}.10.4", i4)
     # ARP rows (ipNetToMedia)
     |> put_arp_row(arp_phys_base, arp_type_base, if_index, i1, m1)
@@ -196,8 +206,10 @@ defmodule FirmwareManager.SnmpKitSimHelper do
   end
 
   defp put_arp_row(map, arp_phys_base, arp_type_base, if_index, ip_bin, mac_bin)
-       when is_binary(ip_bin) and byte_size(ip_bin) == 4 and is_binary(mac_bin) and byte_size(mac_bin) == 6 do
+       when is_binary(ip_bin) and byte_size(ip_bin) == 4 and is_binary(mac_bin) and
+              byte_size(mac_bin) == 6 do
     dotted = ip_bin |> :binary.bin_to_list() |> Enum.join(".")
+
     map
     |> Map.put("#{arp_phys_base}.#{if_index}.#{dotted}", %{type: "OCTET STRING", value: mac_bin})
     |> Map.put("#{arp_type_base}.#{if_index}.#{dotted}", %{type: "INTEGER", value: 3})

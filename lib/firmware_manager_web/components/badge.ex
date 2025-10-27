@@ -276,6 +276,7 @@ defmodule FirmwareManagerWeb.Components.Badge do
 
   defp badge_indicator(assigns) do
     ~H"""
+
     """
   end
 

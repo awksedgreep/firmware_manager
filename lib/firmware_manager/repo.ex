@@ -1,4 +1,5 @@
 defmodule FirmwareManager.Repo do
-  use AshSqlite.Repo,
-    otp_app: :firmware_manager
+  use Ecto.Repo,
+    otp_app: :firmware_manager,
+    adapter: Ecto.Adapters.SQLite3
 end

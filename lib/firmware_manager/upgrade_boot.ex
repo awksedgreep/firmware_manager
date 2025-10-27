@@ -51,7 +51,9 @@ defmodule FirmwareManager.UpgradeBoot do
         _ = DynamicSupervisor.terminate_child(FirmwareManager.UpgradeSupervisor, pid)
         if enabled?(), do: ensure_started()
         :ok
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -60,19 +62,25 @@ defmodule FirmwareManager.UpgradeBoot do
       nil ->
         spec = %{
           id: FirmwareManager.UpgradeScheduler,
-          start: {FirmwareManager.UpgradeScheduler, :start_link, [[interval_ms: get_interval_ms()]]},
+          start:
+            {FirmwareManager.UpgradeScheduler, :start_link, [[interval_ms: get_interval_ms()]]},
           restart: :permanent
         }
+
         DynamicSupervisor.start_child(FirmwareManager.UpgradeSupervisor, spec)
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
   defp stop_if_running do
     case Process.whereis(FirmwareManager.UpgradeScheduler) do
-      pid when is_pid(pid) -> DynamicSupervisor.terminate_child(FirmwareManager.UpgradeSupervisor, pid)
-      _ -> :ok
+      pid when is_pid(pid) ->
+        DynamicSupervisor.terminate_child(FirmwareManager.UpgradeSupervisor, pid)
+
+      _ ->
+        :ok
     end
   end
 end
-

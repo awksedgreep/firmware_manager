@@ -13,7 +13,7 @@ defmodule FirmwareManager.CMTSSNMP do
 
   # OID for docsIfCmtsCmStatusTable (RFC 3636)
   @docs_if_cmts_cm_status_table [1, 3, 6, 1, 2, 1, 10, 127, 1, 3, 3, 1]
-  
+
   # Specific column OIDs we care about
   @docs_if_cmts_cm_status_mac_address @docs_if_cmts_cm_status_table ++ [2]
   @docs_if_cmts_cm_status_value @docs_if_cmts_cm_status_table ++ [6]
@@ -36,10 +36,10 @@ defmodule FirmwareManager.CMTSSNMP do
   @type port_number :: :inet.port_number()
   @type community :: String.t()
   @type modem :: %{
-    mac: String.t(),
-    ip: String.t(),
-    status: atom()
-  }
+          mac: String.t(),
+          ip: String.t(),
+          status: atom()
+        }
 
   @doc """
   Discovers all modems connected to the CMTS by walking only the necessary columns.
@@ -59,23 +59,28 @@ defmodule FirmwareManager.CMTSSNMP do
     target = "#{ip}:#{port}"
     opts = [community: community, version: :v2c]
 
-    with {:ok, mac_column} <- SnmpKit.SnmpMgr.walk(target, @docs_if_cmts_cm_status_mac_address, opts),
+    with {:ok, mac_column} <-
+           SnmpKit.SnmpMgr.walk(target, @docs_if_cmts_cm_status_mac_address, opts),
          {:ok, status_column} <- SnmpKit.SnmpMgr.walk(target, @docs_if_cmts_cm_status_value, opts) do
       mac_map = column_to_index_map(mac_column)
       status_map = column_to_index_map(status_column)
 
       # Prefer non-deprecated IP derivation via ARP (ipNetToMedia). Fallback to legacy docsIf IP column if available.
       arp_phys_oid = [1, 3, 6, 1, 2, 1, 4, 22, 1, 2]
-      arp_entries = case SnmpKit.SnmpMgr.walk(target, arp_phys_oid, opts) do
-        {:ok, rows} -> rows
-        _ -> []
-      end
+
+      arp_entries =
+        case SnmpKit.SnmpMgr.walk(target, arp_phys_oid, opts) do
+          {:ok, rows} -> rows
+          _ -> []
+        end
+
       arp_mac_to_ips = arp_entries_to_mac_to_ips(arp_entries)
 
-      ip_map = case SnmpKit.SnmpMgr.walk(target, @docs_if_cmts_cm_status_inet_address, opts) do
-        {:ok, ip_col} -> column_to_index_map(ip_col)
-        _ -> %{}
-      end
+      ip_map =
+        case SnmpKit.SnmpMgr.walk(target, @docs_if_cmts_cm_status_inet_address, opts) do
+          {:ok, ip_col} -> column_to_index_map(ip_col)
+          _ -> %{}
+        end
 
       modems = combine_with_arp(mac_map, status_map, ip_map, arp_mac_to_ips)
       {:ok, modems}
@@ -93,7 +98,9 @@ defmodule FirmwareManager.CMTSSNMP do
         {:ok, oid_list} ->
           index = List.last(oid_list)
           Map.put(acc, index, value)
-        _ -> acc
+
+        _ ->
+          acc
       end
     end)
   end
@@ -106,7 +113,9 @@ defmodule FirmwareManager.CMTSSNMP do
           # ipNetToMediaPhysAddress index: ifIndex.A.B.C.D; extract last 4 as IPv4
           ip = oid_list |> Enum.slice(-4, 4) |> Enum.join(".")
           Map.update(acc, mac_bin, [ip], fn ips -> [ip | ips] end)
-        _ -> acc
+
+        _ ->
+          acc
       end
     end)
   end
@@ -122,17 +131,19 @@ defmodule FirmwareManager.CMTSSNMP do
 
     Enum.map(all_indices, fn index ->
       mac_bin = Map.get(mac_addresses, index)
+
       mac =
         case mac_bin do
           bin when is_binary(bin) ->
             try do
               bin
               |> :binary.bin_to_list()
-              |> Enum.map(&Integer.to_string(&1, 16) |> String.pad_leading(2, "0"))
+              |> Enum.map(&(Integer.to_string(&1, 16) |> String.pad_leading(2, "0")))
               |> Enum.join(":")
             rescue
               _ -> "00:00:00:00:00:00"
             end
+
           other ->
             Logger.warning("Unexpected MAC address format: #{inspect(other)}")
             "unknown"
@@ -153,6 +164,7 @@ defmodule FirmwareManager.CMTSSNMP do
             rescue
               _ -> "0.0.0.0"
             end
+
           list when is_list(list) ->
             if Enum.all?(list, &is_integer/1) do
               Enum.join(list, ".")
@@ -160,10 +172,13 @@ defmodule FirmwareManager.CMTSSNMP do
               Logger.warning("Unexpected IP address list format: #{inspect(list)}")
               "0.0.0.0"
             end
+
           other when not is_nil(other) ->
             Logger.warning("Unexpected IP address format: #{inspect(other)}")
             "0.0.0.0"
-          _ -> nil
+
+          _ ->
+            nil
         end
 
       ip = ip_from_arp || ip_from_docsif || "0.0.0.0"
@@ -174,7 +189,6 @@ defmodule FirmwareManager.CMTSSNMP do
       %{mac: mac, ip: ip, status: status}
     end)
   end
-
 
   @doc """
   Gets information about a specific modem by MAC address.
@@ -188,7 +202,9 @@ defmodule FirmwareManager.CMTSSNMP do
           nil -> {:error, :not_found}
           modem -> {:ok, modem}
         end
-      {:error, reason} -> {:error, reason}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -208,15 +224,16 @@ defmodule FirmwareManager.CMTSSNMP do
     parts = if hours > 0, do: ["#{hours} hour#{plural(hours)}" | parts], else: parts
     parts = if minutes > 0, do: ["#{minutes} minute#{plural(minutes)}" | parts], else: parts
 
-    parts = if length(parts) > 0 do
-      ["#{seconds} second#{plural(seconds)}" | parts]
-    else
-      if seconds > 0 or parts == [] do
+    parts =
+      if length(parts) > 0 do
         ["#{seconds} second#{plural(seconds)}" | parts]
       else
-        parts
+        if seconds > 0 or parts == [] do
+          ["#{seconds} second#{plural(seconds)}" | parts]
+        else
+          parts
+        end
       end
-    end
 
     parts = if parts == [], do: ["0 seconds"], else: parts
 

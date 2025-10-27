@@ -1,9 +1,3 @@
 defmodule FirmwareManager.UpgradeRules do
-  @moduledoc "Ash domain for upgrade rules."
-  use Ash.Domain, otp_app: :firmware_manager
-
-  resources do
-    resource FirmwareManager.UpgradeRules.Rule
-  end
+  @moduledoc "Context namespace for upgrade rules (Ecto)."
 end
-

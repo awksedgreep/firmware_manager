@@ -10,4 +10,3 @@ defmodule FirmwareManager.Repo.Migrations.AddRuleIdToUpgradeLogs do
     create index(:upgrade_logs, [:rule_id])
   end
 end
-

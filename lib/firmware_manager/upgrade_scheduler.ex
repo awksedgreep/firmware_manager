@@ -41,13 +41,26 @@ defmodule FirmwareManager.UpgradeScheduler do
       opts =
         %{}
         |> Map.put(:firmware_file, rule.firmware_file)
-        |> then(fn acc -> if rule.mac_rule && rule.mac_rule != "", do: Map.put(acc, :mac_rule, rule.mac_rule), else: acc end)
-        |> then(fn acc -> if rule.sysdescr_glob && rule.sysdescr_glob != "", do: Map.put(acc, :sysdescr_glob, rule.sysdescr_glob), else: acc end)
-        |> then(fn acc -> if rule.tftp_server && rule.tftp_server != "", do: Map.put(acc, :tftp_server, rule.tftp_server), else: acc end)
+        |> then(fn acc ->
+          if rule.mac_rule && rule.mac_rule != "",
+            do: Map.put(acc, :mac_rule, rule.mac_rule),
+            else: acc
+        end)
+        |> then(fn acc ->
+          if rule.sysdescr_glob && rule.sysdescr_glob != "",
+            do: Map.put(acc, :sysdescr_glob, rule.sysdescr_glob),
+            else: acc
+        end)
+        |> then(fn acc ->
+          if rule.tftp_server && rule.tftp_server != "",
+            do: Map.put(acc, :tftp_server, rule.tftp_server),
+            else: acc
+        end)
 
       with {:ok, plan0} <- RuleMatcher.plan_upgrades_multi(cmts_list, opts),
            plan <- Enum.map(plan0, &Map.put(&1, :rule_id, rule.id)),
-           {:ok, _results} <- RuleMatcher.apply_plan_multi(plan, concurrency: 6, poll_ms: 300, poll_attempts: 50) do
+           {:ok, _results} <-
+             RuleMatcher.apply_plan_multi(plan, concurrency: 6, poll_ms: 300, poll_attempts: 50) do
         :ok
       else
         _ -> :ok
@@ -57,4 +70,3 @@ defmodule FirmwareManager.UpgradeScheduler do
     :ok
   end
 end
-

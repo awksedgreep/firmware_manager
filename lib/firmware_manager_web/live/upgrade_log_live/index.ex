@@ -55,15 +55,26 @@ defmodule FirmwareManagerWeb.UpgradeLogLive.Index do
     total_pages = ceil(total_entries / page_size)
 
     # Get paginated data
-    upgrade_logs = FirmwareManager.Modem.list_upgrade_logs(
-      limit: page_size,
-      offset: offset,
-      sort_by: sort_by,
-      sort: sort_dir
-    )
-    
+    upgrade_logs =
+      FirmwareManager.Modem.list_upgrade_logs(
+        limit: page_size,
+        offset: offset,
+        sort_by: sort_by,
+        sort: sort_dir
+      )
+
     # Convert Ash resources to maps with IDs for the stream
-    upgrade_logs_with_ids = Enum.map(upgrade_logs, fn log -> %{id: log.id, mac_address: log.mac_address, old_sysdescr: log.old_sysdescr, new_sysdescr: log.new_sysdescr, new_firmware: log.new_firmware, upgraded_at: log.upgraded_at} end)
+    upgrade_logs_with_ids =
+      Enum.map(upgrade_logs, fn log ->
+        %{
+          id: log.id,
+          mac_address: log.mac_address,
+          old_sysdescr: log.old_sysdescr,
+          new_sysdescr: log.new_sysdescr,
+          new_firmware: log.new_firmware,
+          upgraded_at: log.upgraded_at
+        }
+      end)
 
     socket
     |> assign(:total_entries, total_entries)
@@ -76,7 +87,7 @@ defmodule FirmwareManagerWeb.UpgradeLogLive.Index do
     |> assign(:page_title, "Listing Upgrade logs")
     |> assign(:upgrade_log, nil)
   end
-  
+
   # Helper function to define column widths
   def column_width_class(:mac_address), do: "w-24"
   def column_width_class(:old_sysdescr), do: "w-80"
@@ -92,45 +103,48 @@ defmodule FirmwareManagerWeb.UpgradeLogLive.Index do
     field = String.to_existing_atom(field)
     current_sort_by = socket.assigns.sort_by
     current_sort_dir = socket.assigns.sort_dir
-    
+
     # If clicking the same column, toggle the sort direction
-    {sort_by, sort_dir} = if field == current_sort_by do
-      {field, if(current_sort_dir == :asc, do: :desc, else: :asc)}
-    else
-      # Default to ascending for a new column
-      {field, :asc}
-    end
-    
-    socket = 
+    {sort_by, sort_dir} =
+      if field == current_sort_by do
+        {field, if(current_sort_dir == :asc, do: :desc, else: :asc)}
+      else
+        # Default to ascending for a new column
+        {field, :asc}
+      end
+
+    socket =
       socket
       |> assign(:sort_by, sort_by)
       |> assign(:sort_dir, sort_dir)
-      |> assign(:page, 1) # Reset to first page when sorting changes
+      # Reset to first page when sorting changes
+      |> assign(:page, 1)
       |> load_upgrade_logs()
-      
+
     {:noreply, socket}
   end
-  
+
   @impl true
   def handle_event("pagination", %{"page" => "$PAGE$"}, socket) do
     # This is a special case for the placeholder value
     # The actual page number will be replaced by the component
     {:noreply, socket}
   end
-  
+
   @impl true
-  def handle_event("pagination", %{"action" => action, "page" => page, "value" => _}, socket) when action == "select" do
+  def handle_event("pagination", %{"action" => action, "page" => page, "value" => _}, socket)
+      when action == "select" do
     # Handle the select action from pagination component
     {page_num, _} = Integer.parse(to_string(page))
-    
+
     socket =
       socket
       |> assign(:page, page_num)
       |> load_upgrade_logs()
-    
+
     {:noreply, socket}
   end
-  
+
   @impl true
   def handle_event("pagination", %{"page" => page}, socket) when is_integer(page) do
     socket =
@@ -151,6 +165,7 @@ defmodule FirmwareManagerWeb.UpgradeLogLive.Index do
           |> load_upgrade_logs()
 
         {:noreply, socket}
+
       :error ->
         # Handle the case where page is not a valid integer
         {:noreply, socket}
@@ -161,13 +176,13 @@ defmodule FirmwareManagerWeb.UpgradeLogLive.Index do
   def handle_event("truncate_logs", _params, socket) do
     # Delete all upgrade logs
     FirmwareManager.Modem.delete_all_upgrade_logs()
-    
+
     # Reset pagination to page 1 and refresh data
-    socket = 
+    socket =
       socket
       |> assign(:page, 1)
       |> load_upgrade_logs()
-    
+
     {:noreply, socket |> put_flash(:info, "All upgrade logs have been deleted.")}
   end
 end

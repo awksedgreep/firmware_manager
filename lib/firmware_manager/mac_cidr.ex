@@ -1,5 +1,6 @@
 defmodule FirmwareManager.MacCIDR do
   import Bitwise
+
   @moduledoc """
   MAC address CIDR/mask matching utilities.
 
@@ -80,7 +81,7 @@ defmodule FirmwareManager.MacCIDR do
   """
   @spec mac_to_int(String.t() | binary()) :: {:ok, mac_int()} | {:error, term()}
   def mac_to_int(<<a, b, c, d, e, f>>) do
-    {:ok, ((a <<< 40) ||| (b <<< 32) ||| (c <<< 24) ||| (d <<< 16) ||| (e <<< 8) ||| f)}
+    {:ok, a <<< 40 ||| b <<< 32 ||| c <<< 24 ||| d <<< 16 ||| e <<< 8 ||| f}
   end
 
   def mac_to_int(mac) when is_binary(mac) do
@@ -97,7 +98,8 @@ defmodule FirmwareManager.MacCIDR do
           _ -> {:error, :invalid_mac}
         end
 
-      _ -> {:error, :invalid_mac}
+      _ ->
+        {:error, :invalid_mac}
     end
   end
 
@@ -109,6 +111,7 @@ defmodule FirmwareManager.MacCIDR do
   @spec int_to_mac(mac_int()) :: String.t()
   def int_to_mac(int) when is_integer(int) and int >= 0 and int <= @mac_max do
     <<a::8, b::8, c::8, d::8, e::8, f::8>> = <<int::48>>
+
     [a, b, c, d, e, f]
     |> Enum.map(&(Integer.to_string(&1, 16) |> String.pad_leading(2, "0")))
     |> Enum.join(":")
@@ -130,7 +133,8 @@ defmodule FirmwareManager.MacCIDR do
           {n, _} when n >= 0 and n <= @mac_bits ->
             {:ok, prefix_mask(n)}
 
-          _ -> {:error, :invalid_mask}
+          _ ->
+            {:error, :invalid_mask}
         end
     end
   end

@@ -1,12 +1,24 @@
 <.header class="mb-6">
   <div class="flex justify-between items-center">
-    <h1 class="text-2xl font-bold text-white">Upgrade Logs (<%= @total_entries %> total)</h1>
+    <h1 class="text-2xl font-bold text-white">Upgrade Logs ({@total_entries} total)</h1>
     <div>
-      <button 
+      <button
         phx-click={JS.show(to: "#confirm-truncate-modal")}
-        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md shadow-sm transition-colors duration-150 ease-in-out flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md shadow-sm transition-colors duration-150 ease-in-out flex items-center gap-2"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
         </svg>
         Truncate Logs
       </button>
@@ -15,19 +27,26 @@
 </.header>
 
 <!-- Confirmation Modal -->
-<div id="confirm-truncate-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+<div
+  id="confirm-truncate-modal"
+  class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden"
+>
   <div class="bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full border border-gray-700">
     <h3 class="text-xl font-semibold text-gray-100 mb-4">Confirm Deletion</h3>
-    <p class="text-gray-300 mb-6">Are you sure you want to delete ALL upgrade logs? This action cannot be undone.</p>
+    <p class="text-gray-300 mb-6">
+      Are you sure you want to delete ALL upgrade logs? This action cannot be undone.
+    </p>
     <div class="flex justify-end space-x-3">
-      <button 
+      <button
         phx-click={JS.hide(to: "#confirm-truncate-modal")}
-        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors duration-150">
+        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors duration-150"
+      >
         Cancel
       </button>
-      <button 
+      <button
         phx-click={JS.push("truncate_logs") |> JS.hide(to: "#confirm-truncate-modal")}
-        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors duration-150">
+        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors duration-150"
+      >
         Delete All Logs
       </button>
     </div>
@@ -40,17 +59,43 @@
       <tr>
         <%= for option <- @sort_options do %>
           <th class={["p-0 pb-4 pr-6 font-normal", column_width_class(option.field)]}>
-            <div class="flex items-center cursor-pointer" phx-click="sort" phx-value-field={option.field}>
-              <%= option.label %>
+            <div
+              class="flex items-center cursor-pointer"
+              phx-click="sort"
+              phx-value-field={option.field}
+            >
+              {option.label}
               <%= if @sort_by == option.field do %>
                 <span class="ml-1">
                   <%= if @sort_dir == :asc do %>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M5 15l7-7 7 7"
+                      />
                     </svg>
                   <% else %>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 9l-7 7-7-7"
+                      />
                     </svg>
                   <% end %>
                 </span>
@@ -65,12 +110,16 @@
       phx-update="stream"
       class="relative divide-y divide-zinc-800 border-t border-zinc-700 text-[10px] leading-4 text-gray-300 font-mono"
     >
-      <tr :for={{id, upgrade_log} <- @streams.upgrade_logs} id={id} class="group hover:bg-zinc-800">
+      <tr
+        :for={{id, upgrade_log} <- @streams.upgrade_logs}
+        id={id}
+        class="group hover:bg-zinc-800"
+      >
         <td class="relative p-0">
           <div class="block py-4 pr-6">
             <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800 sm:rounded-l-xl" />
             <span class="relative text-gray-300">
-              <%= upgrade_log.mac_address %>
+              {upgrade_log.mac_address}
             </span>
           </div>
         </td>
@@ -80,9 +129,9 @@
             <span class="relative">
               <div class="max-w-xs truncate" title={upgrade_log.old_sysdescr}>
                 <%= if String.length(upgrade_log.old_sysdescr) > 120 do %>
-                  <%= String.slice(upgrade_log.old_sysdescr, 0, 117) <> "..."%>
+                  {String.slice(upgrade_log.old_sysdescr, 0, 117) <> "..."}
                 <% else %>
-                  <%= upgrade_log.old_sysdescr %>
+                  {upgrade_log.old_sysdescr}
                 <% end %>
               </div>
             </span>
@@ -94,9 +143,9 @@
             <span class="relative">
               <div class="max-w-xs truncate" title={upgrade_log.new_sysdescr}>
                 <%= if String.length(upgrade_log.new_sysdescr) > 120 do %>
-                  <%= String.slice(upgrade_log.new_sysdescr, 0, 117) <> "..."%>
+                  {String.slice(upgrade_log.new_sysdescr, 0, 117) <> "..."}
                 <% else %>
-                  <%= upgrade_log.new_sysdescr %>
+                  {upgrade_log.new_sysdescr}
                 <% end %>
               </div>
             </span>
@@ -106,7 +155,7 @@
           <div class="block py-4 pr-6">
             <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800" />
             <span class="relative">
-              <%= upgrade_log.new_firmware %>
+              {upgrade_log.new_firmware}
             </span>
           </div>
         </td>
@@ -114,7 +163,7 @@
           <div class="block py-4 pr-6">
             <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-800 sm:rounded-r-xl" />
             <span class="relative">
-              <%= upgrade_log.upgraded_at %>
+              {upgrade_log.upgraded_at}
             </span>
           </div>
         </td>
@@ -123,19 +172,32 @@
   </table>
 </div>
 
-<div class="mt-6" id="pagination-container" phx-hook="KeyboardNavigation" data-current-page={@page} data-total-pages={@total_pages}>
+<div
+  class="mt-6"
+  id="pagination-container"
+  phx-hook="KeyboardNavigation"
+  data-current-page={@page}
+  data-total-pages={@total_pages}
+>
   <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
     <div class="text-sm text-gray-300">
-      Showing <span class="font-medium text-gray-100"><%= (@page - 1) * @page_size + 1 %></span> to <span class="font-medium text-gray-100"><%= min(@page * @page_size, @total_entries) %></span> of <span class="font-medium text-gray-100"><%= @total_entries %></span> entries
+      Showing <span class="font-medium text-gray-100">{(@page - 1) * @page_size + 1}</span>
+      to <span class="font-medium text-gray-100">{min(@page * @page_size, @total_entries)}</span>
+      of <span class="font-medium text-gray-100">{@total_entries}</span>
+      entries
     </div>
-    
+
     <div>
       <div class="flex items-center gap-2">
         <div class="hidden sm:flex items-center text-xs text-gray-400 mr-2">
           <span class="mr-1">Tip: Use</span>
-          <kbd class="px-1.5 py-0.5 bg-zinc-700 rounded border border-zinc-600 text-gray-300">←</kbd>
+          <kbd class="px-1.5 py-0.5 bg-zinc-700 rounded border border-zinc-600 text-gray-300">
+            ←
+          </kbd>
           <span class="mx-1">and</span>
-          <kbd class="px-1.5 py-0.5 bg-zinc-700 rounded border border-zinc-600 text-gray-300">→</kbd>
+          <kbd class="px-1.5 py-0.5 bg-zinc-700 rounded border border-zinc-600 text-gray-300">
+            →
+          </kbd>
           <span class="ml-1">to navigate</span>
         </div>
         <FirmwareManagerWeb.Components.Pagination.pagination
@@ -156,7 +218,12 @@
   </div>
 </div>
 
-<.modal :if={@live_action in [:new, :edit]} id="upgrade_log-modal" show on_cancel={JS.patch(~p"/upgrade_logs")}>
+<.modal
+  :if={@live_action in [:new, :edit]}
+  id="upgrade_log-modal"
+  show
+  on_cancel={JS.patch(~p"/upgrade_logs")}
+>
   <.live_component
     module={FirmwareManagerWeb.UpgradeLogLive.FormComponent}
     id={@upgrade_log.id || :new}

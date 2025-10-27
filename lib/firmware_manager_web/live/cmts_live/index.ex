@@ -43,19 +43,19 @@ defmodule FirmwareManagerWeb.CmtsLive.Index do
   def handle_event("delete_cmts", %{"id" => id}, socket) do
     # Get the CMTS record
     cmts = Modem.get_cmts!(id)
-    
+
     # Try to delete it
     case Modem.delete_cmts(cmts) do
       {:ok, _deleted_cmts} ->
         # Reload the CMTS collection after successful deletion
-        {:noreply, 
+        {:noreply,
          socket
          |> assign(:cmts_collection, Modem.list_cmts())
          |> put_flash(:info, "CMTS deleted successfully.")}
-        
+
       {:error, changeset} ->
         # Handle error case
-        {:noreply, 
+        {:noreply,
          socket
          |> put_flash(:error, "Could not delete CMTS: #{inspect(changeset.errors)}")}
     end

@@ -1,65 +1,30 @@
 defmodule FirmwareManager.Modem.Cmts do
   @moduledoc "CMTS (Cable Modem Termination System) configuration"
 
-  use Ash.Resource,
-    domain: FirmwareManager.Modem,
-    data_layer: AshSqlite.DataLayer
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  sqlite do
-    repo FirmwareManager.Repo
-    table "cmts"
-  end
-
-  actions do
-    # No defaults needed as we define all actions explicitly
-    
-    read :read do
-      primary? true
-      pagination keyset?: true, required?: false
-    end
-
-    create :create do
-      accept [:name, :ip, :snmp_read, :snmp_port, :modem_snmp_read, :modem_snmp_write, :virtual, :modem_count]
-    end
-
-    update :update do
-      accept [:name, :ip, :snmp_read, :snmp_port, :modem_snmp_read, :modem_snmp_write, :virtual, :modem_count]
-    end
-    
-    destroy :destroy do
-      primary? true
-    end
-  end
-
-  attributes do
-    # Primary key
-    uuid_primary_key :id
-
-    # Name of the CMTS
-    attribute :name, :string, allow_nil?: true, sortable?: true
-
-    # IP address of the CMTS
-    attribute :ip, :string, allow_nil?: false, sortable?: true
-
-    # SNMP read community string for the CMTS
-    attribute :snmp_read, :string, allow_nil?: false
-
-    # SNMP port for CMTS SNMP operations (defaults to 161 for real CMTS; non-standard when virtual)
-    attribute :snmp_port, :integer, allow_nil?: false, default: 161
-
-    # SNMP read community string for modems
-    attribute :modem_snmp_read, :string, allow_nil?: false
-
-    # SNMP write community string for modems
-    attribute :modem_snmp_write, :string, allow_nil?: false
-
-    # Whether this CMTS is simulated via snmpkit
-    attribute :virtual, :boolean, allow_nil?: false, default: false
-
-    # Number of simulated modems to populate in virtual mode
-    attribute :modem_count, :integer, allow_nil?: false, default: 4
-
-    # Timestamps for creation and updates
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
+  schema "cmts" do
+    field :name, :string
+    field :ip, :string
+    field :snmp_read, :string
+    field :snmp_port, :integer, default: 161
+    field :modem_snmp_read, :string
+    field :modem_snmp_write, :string
+    field :virtual, :boolean, default: false
+    field :modem_count, :integer, default: 4
     timestamps()
   end
+
+  def create_changeset(struct, attrs) do
+    struct
+    |> cast(attrs, [:name, :ip, :snmp_read, :snmp_port, :modem_snmp_read, :modem_snmp_write, :virtual, :modem_count])
+    |> validate_required([:ip, :snmp_read, :modem_snmp_read, :modem_snmp_write])
+    |> validate_number(:snmp_port, greater_than: 0)
+    |> validate_number(:modem_count, greater_than: 0)
+  end
+
+  def update_changeset(struct, attrs), do: create_changeset(struct, attrs)
 end

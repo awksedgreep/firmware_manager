@@ -9,4 +9,3 @@ defmodule FirmwareManager.Repo.Migrations.AddSnmpPortAndVirtualToCmts do
     end
   end
 end
-

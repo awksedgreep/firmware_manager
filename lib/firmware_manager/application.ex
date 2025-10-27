@@ -7,26 +7,45 @@ defmodule FirmwareManager.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      FirmwareManagerWeb.Telemetry,
-      FirmwareManager.Repo,
-      {Ecto.Migrator,
-       repos: Application.fetch_env!(:firmware_manager, :ecto_repos), skip: skip_migrations?()},
-      # Start virtual CMTS simulators for DB entries marked as virtual
-      FirmwareManager.SNMP.SimBoot,
-      # Dynamic supervisor to manage optional, disable-able background workers (e.g., upgrade scheduler)
-      {DynamicSupervisor, name: FirmwareManager.UpgradeSupervisor, strategy: :one_for_one},
-      # Boot hook to optionally enable the upgrade scheduler based on config
-      FirmwareManager.UpgradeBoot,
-      # Daily log retention worker
-      FirmwareManager.LogRetention,
-      {DNSCluster, query: Application.get_env(:firmware_manager, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: FirmwareManager.PubSub},
-      # Start the Finch HTTP client for sending emails
-      {Finch, name: FirmwareManager.Finch},
-      # Start to serve requests, typically the last entry
-      FirmwareManagerWeb.Endpoint
+    simple_sip_children = [
+      # SIP stack
+      {Registry, keys: :unique, name: SimpleSip.SessionRegistry},
+      SimpleSip.RtpPortAllocator,
+      SimpleSip.Registrar,
+      {DynamicSupervisor, name: SimpleSip.SessionSupervisor, strategy: :one_for_one},
+      SimpleSip.SipListener,
+      # MGCP stack
+      SimpleSip.MgcpRegistrar,
+      {Registry, keys: :unique, name: SimpleSip.MgcpSessionRegistry},
+      {DynamicSupervisor, name: SimpleSip.MgcpSessionSupervisor, strategy: :one_for_one},
+      SimpleSip.MgcpListener
     ]
+
+    children =
+      [
+        FirmwareManagerWeb.Telemetry,
+        FirmwareManager.Repo,
+        {Ecto.Migrator,
+         repos: Application.fetch_env!(:firmware_manager, :ecto_repos), skip: skip_migrations?()},
+        # Start virtual CMTS simulators for DB entries marked as virtual
+        FirmwareManager.SNMP.SimBoot,
+        # Dynamic supervisor to manage optional, disable-able background workers (e.g., upgrade scheduler)
+        {DynamicSupervisor, name: FirmwareManager.UpgradeSupervisor, strategy: :one_for_one},
+        # Boot hook to optionally enable the upgrade scheduler based on config
+        FirmwareManager.UpgradeBoot,
+        # Daily log retention worker
+        FirmwareManager.LogRetention,
+        {DNSCluster,
+         query: Application.get_env(:firmware_manager, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: FirmwareManager.PubSub},
+        # Start the Finch HTTP client for sending emails
+        {Finch, name: FirmwareManager.Finch}
+      ] ++
+        simple_sip_children ++
+        [
+          # Start to serve requests, typically the last entry
+          FirmwareManagerWeb.Endpoint
+        ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

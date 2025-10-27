@@ -663,6 +663,7 @@ defmodule FirmwareManagerWeb.Components.Button do
 
   defp button_indicator(assigns) do
     ~H"""
+
     """
   end
 

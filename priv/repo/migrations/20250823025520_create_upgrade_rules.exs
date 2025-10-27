@@ -18,4 +18,3 @@ defmodule FirmwareManager.Repo.Migrations.CreateUpgradeRules do
     create unique_index(:upgrade_rules, [:name])
   end
 end
-

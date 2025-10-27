@@ -7,70 +7,32 @@
 # General application configuration
 import Config
 
-config :ash,
-  allow_forbidden_field_for_relationships_by_default?: true,
-  include_embedded_source_by_default?: false,
-  show_keysets_for_all_actions?: false,
-  default_page_type: :keyset,
-  policies: [no_filter_static_forbidden_reads?: false],
-  keep_read_action_loads_when_loading?: false,
-  default_actions_require_atomic?: true,
-  read_action_after_action_hooks_in_order?: true,
-  bulk_actions_default_to_errors?: true
-
-config :spark,
-  formatter: [
-    remove_parens?: true,
-    "Ash.Resource": [
-      section_order: [
-        :admin,
-        :resource,
-        :code_interface,
-        :actions,
-        :policies,
-        :pub_sub,
-        :preparations,
-        :changes,
-        :validations,
-        :multitenancy,
-        :attributes,
-        :relationships,
-        :calculations,
-        :aggregates,
-        :identities
-      ]
-    ],
-    "Ash.Domain": [
-      section_order: [:admin, :resources, :policies, :authorization, :domain, :execution]
-    ]
-  ]
-
 config :firmware_manager,
   ecto_repos: [FirmwareManager.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # SNMP Configuration
-#config :snmp,
-  # agent: [
-  #   versions: [:v1, :v2, :v3],
-  #   db_dir: ~c"priv/mibs",
-  #   server: [],
-  #   config: [
-  #     dir: ~c"priv/conf",
-  #     db_dir: ~c"priv/db",
-  #     db_init_error: :stop,
-  #     repair: false,
-  #     verbosity: :silence
-  #   ]
-  # ],
-  # manager: [
-  #   server: [verbosity: :silence],
-  #   config: [
-  #     dir: ~c"priv/conf",
-  #     db_dir: ~c"priv/db",
-  #     verbosity: :silence
-  #   ]
-  # ]
+# config :snmp,
+# agent: [
+#   versions: [:v1, :v2, :v3],
+#   db_dir: ~c"priv/mibs",
+#   server: [],
+#   config: [
+#     dir: ~c"priv/conf",
+#     db_dir: ~c"priv/db",
+#     db_init_error: :stop,
+#     repair: false,
+#     verbosity: :silence
+#   ]
+# ],
+# manager: [
+#   server: [verbosity: :silence],
+#   config: [
+#     dir: ~c"priv/conf",
+#     db_dir: ~c"priv/db",
+#     verbosity: :silence
+#   ]
+# ]
 
 # Configures the endpoint
 config :firmware_manager, FirmwareManagerWeb.Endpoint,
@@ -127,8 +89,18 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-# Register Ash domains
-config :firmware_manager, ash_domains: [FirmwareManager.Modem]
+
+# Defaults for the SimpleSip integration (SIP + MGCP lab services)
+config :firmware_manager,
+  simple_sip: [
+    sip_ip: {0, 0, 0, 0},
+    sip_port: 5060,
+    mgcp_port: 2427,
+    rtp_port_start: 20000,
+    rtp_port_end: 20019,
+    realm: "simple_sip",
+    log_verbose: true
+  ]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

@@ -29,7 +29,9 @@ defmodule FirmwareManager.SNMP.SimBoot do
             Logger.info("Virtual CMTS #{cmts.id} simulator ensured on port #{port}")
             acc + 1
 
-          :noop -> acc
+          :noop ->
+            acc
+
           {:error, reason} ->
             Logger.warning("Failed to start simulator for #{cmts.id}: #{inspect(reason)}")
             acc

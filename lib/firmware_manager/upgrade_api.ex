@@ -1,31 +1,30 @@
 defmodule FirmwareManager.UpgradeAPI do
-  @moduledoc "High-level API for managing upgrade rules."
+  @moduledoc "High-level API for managing upgrade rules (Ecto)."
 
+  import Ecto.Query
+  alias FirmwareManager.Repo
   alias FirmwareManager.UpgradeRules.Rule
-  require Ash.Query
 
-  def list_rules do
-    Ash.read!(Rule)
-  end
+  def list_rules, do: Repo.all(Rule)
 
   def list_enabled_rules do
-    Rule |> Ash.Query.filter(enabled: true) |> Ash.read!()
+    from(r in Rule, where: r.enabled == true)
+    |> Repo.all()
   end
 
-  def get_rule!(id) do
-    Rule |> Ash.Query.filter(id: id) |> Ash.read_one!()
-  end
+  def get_rule!(id), do: Repo.get!(Rule, id)
 
   def create_rule(attrs) do
-    Rule |> Ash.Changeset.for_create(:create, attrs) |> Ash.create()
+    %Rule{}
+    |> Rule.create_changeset(attrs)
+    |> Repo.insert()
   end
 
   def update_rule(%Rule{} = rule, attrs) do
-    rule |> Ash.Changeset.for_update(:update, attrs) |> Ash.update()
+    rule
+    |> Rule.update_changeset(attrs)
+    |> Repo.update()
   end
 
-  def delete_rule(%Rule{} = rule) do
-    rule |> Ash.Changeset.for_destroy(:destroy) |> Ash.destroy()
-  end
+  def delete_rule(%Rule{} = rule), do: Repo.delete(rule)
 end
-

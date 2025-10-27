@@ -35,7 +35,8 @@ defmodule FirmwareManager.ModemSNMP do
     t = target(ip, port)
     opts = [community: community, version: :v2c]
 
-    with {:ok, {_o1, _t1, admin_status}} <- SnmpKit.SnmpMgr.get_with_type(t, @docs_if_docs_dev_sw_admin_status, opts) do
+    with {:ok, {_o1, _t1, admin_status}} <-
+           SnmpKit.SnmpMgr.get_with_type(t, @docs_if_docs_dev_sw_admin_status, opts) do
       # Try modern/legacy variants, tolerate missing values
       server =
         case SnmpKit.SnmpMgr.get_with_type(t, @docs_if_docs_dev_sw_server, opts) do
@@ -45,7 +46,9 @@ defmodule FirmwareManager.ModemSNMP do
 
       filename =
         case SnmpKit.SnmpMgr.get_with_type(t, @docs_if_docs_dev_sw_filename, opts) do
-          {:ok, {_o, _t, v}} -> v
+          {:ok, {_o, _t, v}} ->
+            v
+
           _ ->
             case SnmpKit.SnmpMgr.get_with_type(t, @docs_dev_sw_server_boot_filename, opts) do
               {:ok, {_o2, _t2, v2}} -> v2
@@ -82,12 +85,21 @@ defmodule FirmwareManager.ModemSNMP do
   def get_modem_info(ip, community, port \\ 161) when is_binary(ip) and is_binary(community) do
     t = target(ip, port)
 
-    with {:ok, {_o1, _t1, sys_descr}} <- SnmpKit.SnmpMgr.get_with_type(t, @sys_descr, community: community, version: :v2c),
-         {:ok, {_o2, _t2, sys_name}} <- SnmpKit.SnmpMgr.get_with_type(t, @sys_name, community: community, version: :v2c),
-         {:ok, {_o3, _t3, sys_contact}} <- SnmpKit.SnmpMgr.get_with_type(t, @sys_contact, community: community, version: :v2c),
-         {:ok, {_o4, _t4, sys_location}} <- SnmpKit.SnmpMgr.get_with_type(t, @sys_location, community: community, version: :v2c),
-         {:ok, {_o5, _t5, sys_uptime}} <- SnmpKit.SnmpMgr.get_with_type(t, @sys_uptime, community: community, version: :v2c),
-         {:ok, {_o6, _t6, docsis_version}} <- SnmpKit.SnmpMgr.get_with_type(t, @docs_if_sw_version, community: community, version: :v2c),
+    with {:ok, {_o1, _t1, sys_descr}} <-
+           SnmpKit.SnmpMgr.get_with_type(t, @sys_descr, community: community, version: :v2c),
+         {:ok, {_o2, _t2, sys_name}} <-
+           SnmpKit.SnmpMgr.get_with_type(t, @sys_name, community: community, version: :v2c),
+         {:ok, {_o3, _t3, sys_contact}} <-
+           SnmpKit.SnmpMgr.get_with_type(t, @sys_contact, community: community, version: :v2c),
+         {:ok, {_o4, _t4, sys_location}} <-
+           SnmpKit.SnmpMgr.get_with_type(t, @sys_location, community: community, version: :v2c),
+         {:ok, {_o5, _t5, sys_uptime}} <-
+           SnmpKit.SnmpMgr.get_with_type(t, @sys_uptime, community: community, version: :v2c),
+         {:ok, {_o6, _t6, docsis_version}} <-
+           SnmpKit.SnmpMgr.get_with_type(t, @docs_if_sw_version,
+             community: community,
+             version: :v2c
+           ),
          {:ok, upgrade_info} <- check_upgrade_capability(ip, community, port) do
       {:ok,
        %{
@@ -109,15 +121,30 @@ defmodule FirmwareManager.ModemSNMP do
   """
   def upgrade_firmware(ip, write_community, tftp_server, firmware_file, port \\ 161)
       when is_binary(ip) and is_binary(write_community) and
-           is_binary(tftp_server) and is_binary(firmware_file) do
+             is_binary(tftp_server) and is_binary(firmware_file) do
     t = target(ip, port)
 
     case check_upgrade_capability(ip, write_community, port) do
       {:ok, %{upgrade_allowed: true}} ->
         # Perform three SETs in sequence; snmpkit set returns {:ok, value} or {:error, reason}
-        with {:ok, _} <- SnmpKit.SnmpMgr.set(t, @docs_if_docs_dev_sw_server, tftp_server, community: write_community, version: :v2c),
-             {:ok, _} <- SnmpKit.SnmpMgr.set(t, @docs_if_docs_dev_sw_filename, firmware_file, community: write_community, version: :v2c),
-             {:ok, _} <- SnmpKit.SnmpMgr.set(t, @docs_if_docs_dev_sw_admin_status, @docs_if_docs_dev_sw_admin_status_upgrade, community: write_community, version: :v2c) do
+        with {:ok, _} <-
+               SnmpKit.SnmpMgr.set(t, @docs_if_docs_dev_sw_server, tftp_server,
+                 community: write_community,
+                 version: :v2c
+               ),
+             {:ok, _} <-
+               SnmpKit.SnmpMgr.set(t, @docs_if_docs_dev_sw_filename, firmware_file,
+                 community: write_community,
+                 version: :v2c
+               ),
+             {:ok, _} <-
+               SnmpKit.SnmpMgr.set(
+                 t,
+                 @docs_if_docs_dev_sw_admin_status,
+                 @docs_if_docs_dev_sw_admin_status_upgrade,
+                 community: write_community,
+                 version: :v2c
+               ) do
           case get_upgrade_status(ip, write_community, port) do
             {:ok, :upgrade_from_mgt_sw} -> :ok
             other -> other
@@ -140,7 +167,10 @@ defmodule FirmwareManager.ModemSNMP do
   def get_upgrade_status(ip, community, port \\ 161) do
     t = target(ip, port)
 
-    case SnmpKit.SnmpMgr.get_with_type(t, @docs_if_docs_dev_sw_oper_status, community: community, version: :v2c) do
+    case SnmpKit.SnmpMgr.get_with_type(t, @docs_if_docs_dev_sw_oper_status,
+           community: community,
+           version: :v2c
+         ) do
       {:ok, {_oid, _type, status}} -> {:ok, status_code_to_atom(status)}
       error -> error
     end

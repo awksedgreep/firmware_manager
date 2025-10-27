@@ -47,7 +47,8 @@ defmodule FirmwareManager.Rules.RuleMatcher do
   Returns {:ok, [%{mac, ip, port, sysdescr, tftp_server, firmware_file}]} or {:error, reason}.
   """
   @spec plan_upgrades(map(), plan_opts()) :: {:ok, [map()]} | {:error, any()}
-  def plan_upgrades(%{ip: cmts_ip} = cmts, %{firmware_file: fw_file} = opts) when is_binary(fw_file) do
+  def plan_upgrades(%{ip: cmts_ip} = cmts, %{firmware_file: fw_file} = opts)
+      when is_binary(fw_file) do
     read_comm = cmts.modem_snmp_read || cmts.snmp_read || "public"
 
     with {:ok, mods} <- CMTSSNMP.discover_modems(cmts_ip, read_comm, cmts.snmp_port || 161) do
@@ -63,10 +64,17 @@ defmodule FirmwareManager.Rules.RuleMatcher do
         |> Enum.map(fn m ->
           port = Map.get(m, :port) || 161
           # For simulated per-modem ports, use write community as device community
-          comm = if cmts.virtual and port != 161, do: cmts.modem_snmp_write || read_comm, else: read_comm
+          comm =
+            if cmts.virtual and port != 161,
+              do: cmts.modem_snmp_write || read_comm,
+              else: read_comm
+
           case ModemSNMP.get_modem_info(m.ip, comm, port) do
-            {:ok, info} -> Map.merge(m, %{sysdescr: to_string(info.system_description), port: port})
-            _ -> Map.merge(m, %{sysdescr: "", port: port})
+            {:ok, info} ->
+              Map.merge(m, %{sysdescr: to_string(info.system_description), port: port})
+
+            _ ->
+              Map.merge(m, %{sysdescr: "", port: port})
           end
         end)
         |> maybe_filter_sysdescr(sys_glob)
@@ -108,9 +116,11 @@ defmodule FirmwareManager.Rules.RuleMatcher do
                   cmts_id: cmts.id
                 })
               end)
+
             {:ok, items}
 
-          {:error, reason} -> {:error, {cmts.id, reason}}
+          {:error, reason} ->
+            {:error, {cmts.id, reason}}
         end
       end)
 
@@ -119,9 +129,11 @@ defmodule FirmwareManager.Rules.RuleMatcher do
         combined =
           results
           |> Enum.flat_map(fn {:ok, items} -> items end)
+
         {:ok, combined}
 
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -159,7 +171,7 @@ defmodule FirmwareManager.Rules.RuleMatcher do
           fn item -> do_apply_item(item, write_comm, read_comm, poll_ms, poll_attempts) end,
           max_concurrency: concurrency,
           ordered: false,
-          timeout: (poll_ms * poll_attempts) + 15_000
+          timeout: poll_ms * poll_attempts + 15_000
         )
         |> Enum.map(fn
           {:ok, res} -> res
@@ -171,7 +183,13 @@ defmodule FirmwareManager.Rules.RuleMatcher do
     end
   end
 
-  defp do_apply_item(%{mac: mac, ip: ip, port: port0, tftp_server: tftp, firmware_file: file} = item, write_comm, read_comm, poll_ms, poll_attempts) do
+  defp do_apply_item(
+         %{mac: mac, ip: ip, port: port0, tftp_server: tftp, firmware_file: file} = item,
+         write_comm,
+         read_comm,
+         poll_ms,
+         poll_attempts
+       ) do
     port = port0 || 161
 
     pre_sysdescr =
@@ -184,8 +202,12 @@ defmodule FirmwareManager.Rules.RuleMatcher do
     result = ModemSNMP.upgrade_firmware(ip, write_comm, tftp, file, port)
 
     case result do
-      :ok -> :ok
-      {:ok, _status} -> :ok
+      :ok ->
+        :ok
+
+      {:ok, _status} ->
+        :ok
+
       {:error, reason} ->
         Logger.error("Upgrade trigger failed for #{mac} @ #{ip}:#{port}: #{inspect(reason)}")
         {:error, reason}
@@ -193,6 +215,7 @@ defmodule FirmwareManager.Rules.RuleMatcher do
     |> case do
       :ok ->
         final = poll_until_final(ip, read_comm, port, poll_ms, poll_attempts)
+
         case final do
           :upgrade_complete ->
             post_sysdescr =
@@ -200,14 +223,24 @@ defmodule FirmwareManager.Rules.RuleMatcher do
                 {:ok, %{system_description: d}} -> to_string(d)
                 _ -> pre_sysdescr
               end
-            _ = Modem.create_upgrade_log(%{mac_address: mac, old_sysdescr: pre_sysdescr, new_sysdescr: post_sysdescr, new_firmware: to_string(file), rule_id: Map.get(item, :rule_id)})
+
+            _ =
+              Modem.create_upgrade_log(%{
+                mac_address: mac,
+                old_sysdescr: pre_sysdescr,
+                new_sysdescr: post_sysdescr,
+                new_firmware: to_string(file),
+                rule_id: Map.get(item, :rule_id)
+              })
+
             %{mac: mac, result: :ok, final_status: final}
 
           other ->
             %{mac: mac, result: {:error, other}, final_status: other}
         end
 
-      {:error, reason} -> %{mac: mac, result: {:error, reason}, final_status: :unknown}
+      {:error, reason} ->
+        %{mac: mac, result: {:error, reason}, final_status: :unknown}
     end
   end
 
@@ -226,21 +259,25 @@ defmodule FirmwareManager.Rules.RuleMatcher do
   end
 
   defp maybe_filter_mac(mods, nil), do: mods
+
   defp maybe_filter_mac(mods, rule) when is_binary(rule) do
     Enum.filter(mods, fn m -> MacCIDR.mac_match?(m.mac, rule) end)
   end
 
   defp maybe_filter_sysdescr(mods, nil), do: mods
+
   defp maybe_filter_sysdescr(mods, glob) when is_binary(glob) do
     Enum.filter(mods, fn m -> like?(m.sysdescr || "", glob) end)
   end
 
   defp maybe_filter_already_upgraded(plan, true), do: plan
+
   defp maybe_filter_already_upgraded(plan, false) do
     Enum.reject(plan, fn %{mac: mac, firmware_file: file} ->
       FirmwareManager.Modem.upgrade_log_exists?(mac, to_string(file))
     end)
   end
+
   @doc """
   Apply a combined upgrade plan (from plan_upgrades_multi) using per-item credentials.
   """
@@ -255,7 +292,15 @@ defmodule FirmwareManager.Rules.RuleMatcher do
     else
       Task.async_stream(
         plan,
-        fn %{mac: mac, ip: ip, port: port0, tftp_server: tftp, firmware_file: file, read_comm: read_comm, write_comm: write_comm} ->
+        fn %{
+             mac: mac,
+             ip: ip,
+             port: port0,
+             tftp_server: tftp,
+             firmware_file: file,
+             read_comm: read_comm,
+             write_comm: write_comm
+           } ->
           port = port0 || 161
 
           pre_sysdescr =
@@ -266,15 +311,17 @@ defmodule FirmwareManager.Rules.RuleMatcher do
 
           res = ModemSNMP.upgrade_firmware(ip, write_comm, tftp, file, port)
 
-          exec = case res do
-            :ok -> :ok
-            {:ok, _} -> :ok
-            {:error, reason} -> {:error, reason}
-          end
+          exec =
+            case res do
+              :ok -> :ok
+              {:ok, _} -> :ok
+              {:error, reason} -> {:error, reason}
+            end
 
           case exec do
             :ok ->
               final = poll_until_final(ip, read_comm, port, poll_ms, poll_attempts)
+
               case final do
                 :upgrade_complete ->
                   post_sysdescr =
@@ -282,20 +329,38 @@ defmodule FirmwareManager.Rules.RuleMatcher do
                       {:ok, %{system_description: d}} -> to_string(d)
                       _ -> pre_sysdescr
                     end
-                  _ = Modem.create_upgrade_log(%{mac_address: mac, old_sysdescr: pre_sysdescr, new_sysdescr: post_sysdescr, new_firmware: to_string(file), rule_id: Map.get(%{mac: mac, ip: ip, port: port, tftp_server: tftp, firmware_file: file}, :rule_id)})
+
+                  _ =
+                    Modem.create_upgrade_log(%{
+                      mac_address: mac,
+                      old_sysdescr: pre_sysdescr,
+                      new_sysdescr: post_sysdescr,
+                      new_firmware: to_string(file),
+                      rule_id:
+                        Map.get(
+                          %{mac: mac, ip: ip, port: port, tftp_server: tftp, firmware_file: file},
+                          :rule_id
+                        )
+                    })
+
                   %{mac: mac, result: :ok, final_status: final}
 
-                other -> %{mac: mac, result: {:error, other}, final_status: other}
+                other ->
+                  %{mac: mac, result: {:error, other}, final_status: other}
               end
 
-            {:error, reason} -> %{mac: mac, result: {:error, reason}, final_status: :unknown}
+            {:error, reason} ->
+              %{mac: mac, result: {:error, reason}, final_status: :unknown}
           end
         end,
         max_concurrency: concurrency,
         ordered: false,
-        timeout: (poll_ms * poll_attempts) + 15_000
+        timeout: poll_ms * poll_attempts + 15_000
       )
-      |> Enum.map(fn {:ok, v} -> v; other -> %{result: {:error, other}} end)
+      |> Enum.map(fn
+        {:ok, v} -> v
+        other -> %{result: {:error, other}}
+      end)
       |> then(&{:ok, &1})
     end
   end

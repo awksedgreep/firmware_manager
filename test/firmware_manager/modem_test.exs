@@ -8,7 +8,13 @@ defmodule FirmwareManager.ModemTest do
 
     import FirmwareManager.ModemFixtures
 
-    @invalid_attrs %{mac_address: nil, old_sysdescr: nil, new_sysdescr: nil, new_firmware: nil, upgraded_at: nil}
+    @invalid_attrs %{
+      mac_address: nil,
+      old_sysdescr: nil,
+      new_sysdescr: nil,
+      new_firmware: nil,
+      upgraded_at: nil
+    }
 
     test "list_upgrade_logs/0 returns all upgrade_logs" do
       upgrade_log = upgrade_log_fixture()
@@ -31,7 +37,13 @@ defmodule FirmwareManager.ModemTest do
     end
 
     test "create_upgrade_log/1 with valid data creates a upgrade_log" do
-      valid_attrs = %{mac_address: "some mac_address", old_sysdescr: "some old_sysdescr", new_sysdescr: "some new_sysdescr", new_firmware: "some new_firmware", upgraded_at: ~U[2025-05-02 05:14:00Z]}
+      valid_attrs = %{
+        mac_address: "some mac_address",
+        old_sysdescr: "some old_sysdescr",
+        new_sysdescr: "some new_sysdescr",
+        new_firmware: "some new_firmware",
+        upgraded_at: ~U[2025-05-02 05:14:00Z]
+      }
 
       assert {:ok, %UpgradeLog{} = upgrade_log} = Modem.create_upgrade_log(valid_attrs)
       assert upgrade_log.mac_address == "some mac_address"

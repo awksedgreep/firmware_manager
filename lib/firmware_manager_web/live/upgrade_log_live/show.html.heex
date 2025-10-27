@@ -18,7 +18,12 @@
 
 <.back navigate={~p"/upgrade_logs"}>Back to upgrade_logs</.back>
 
-<.modal :if={@live_action == :edit} id="upgrade_log-modal" show on_cancel={JS.patch(~p"/upgrade_logs/#{@upgrade_log}")}>
+<.modal
+  :if={@live_action == :edit}
+  id="upgrade_log-modal"
+  show
+  on_cancel={JS.patch(~p"/upgrade_logs/#{@upgrade_log}")}
+>
   <.live_component
     module={FirmwareManagerWeb.UpgradeLogLive.FormComponent}
     id={@upgrade_log.id}

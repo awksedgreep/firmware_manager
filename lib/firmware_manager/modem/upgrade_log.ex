@@ -1,57 +1,31 @@
 defmodule FirmwareManager.Modem.UpgradeLog do
   @moduledoc "Logs firmware upgrades for modems"
 
-  use Ash.Resource,
-    domain: FirmwareManager.Modem,
-    data_layer: AshSqlite.DataLayer
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  sqlite do
-    repo FirmwareManager.Repo
-    table "upgrade_logs"
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
+  schema "upgrade_logs" do
+    field :mac_address, :string
+    field :old_sysdescr, :string
+    field :new_sysdescr, :string
+    field :new_firmware, :string
+    field :rule_id, :binary_id
+    field :upgraded_at, :utc_datetime
   end
 
-  actions do
-    defaults []
-    
-    read :read do
-      primary? true
-      pagination keyset?: true, required?: false
+  def create_changeset(struct, attrs) do
+    struct
+    |> cast(attrs, [:mac_address, :old_sysdescr, :new_sysdescr, :new_firmware, :upgraded_at, :rule_id])
+    |> validate_required([:mac_address, :old_sysdescr, :new_sysdescr, :new_firmware])
+    |> put_default_upgraded_at()
+  end
+
+  defp put_default_upgraded_at(changeset) do
+    case get_field(changeset, :upgraded_at) do
+      nil -> put_change(changeset, :upgraded_at, DateTime.utc_now() |> DateTime.truncate(:second))
+      _ -> changeset
     end
-    
-    create :create do
-      accept [:mac_address, :old_sysdescr, :new_sysdescr, :new_firmware, :upgraded_at, :rule_id]
-      primary? true
-    end
-  end
-
-  identities do
-    identity :by_mac_address, [:mac_address]
-  end
-
-  calculations do
-    calculate :formatted_date, :string, expr(fragment("strftime('%Y-%m-%d %H:%M:%S', ?) as formatted_date", upgraded_at))
-  end
-
-  attributes do
-    # Primary key
-    uuid_primary_key :id
-
-    # MAC address of the modem
-    attribute :mac_address, :string, allow_nil?: false, sortable?: true
-
-    # Previous system description
-    attribute :old_sysdescr, :string, allow_nil?: false
-
-    # New system description
-    attribute :new_sysdescr, :string, allow_nil?: false
-
-    # New firmware version
-    attribute :new_firmware, :string, allow_nil?: false
-
-    # Optional rule that triggered this upgrade (for auditing)
-    attribute :rule_id, :uuid, allow_nil?: true
-
-    # Timestamp of the upgrade
-    attribute :upgraded_at, :utc_datetime, default: &DateTime.utc_now/0, allow_nil?: false, sortable?: true
   end
 end

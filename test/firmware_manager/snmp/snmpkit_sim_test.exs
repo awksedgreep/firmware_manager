@@ -16,7 +16,20 @@ defmodule FirmwareManager.SnmpKitSimTest do
     modem = hd(modems)
     assert is_binary(modem.mac)
     assert is_binary(modem.ip)
-    assert modem.status in [:online, :offline, :ranging, :other, :ranging_aborted, :ranging_complete, :ip_complete, :registration_complete, :access_denied, :unknown]
+
+    assert modem.status in [
+             :online,
+             :offline,
+             :ranging,
+             :other,
+             :ranging_aborted,
+             :ranging_complete,
+             :ip_complete,
+             :registration_complete,
+             :access_denied,
+             :unknown
+           ]
+
     # Verify the MAC address format
     assert String.match?(modem.mac, ~r/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/)
     # Verify the IP address format
@@ -35,6 +48,8 @@ defmodule FirmwareManager.SnmpKitSimTest do
 
   test "returns not_found for unknown MAC" do
     port = FirmwareManager.SnmpKitSimHelper.get_port()
-    assert {:error, :not_found} = CMTSSNMP.get_modem("127.0.0.1", "public", "00:00:00:00:00:00", port)
+
+    assert {:error, :not_found} =
+             CMTSSNMP.get_modem("127.0.0.1", "public", "00:00:00:00:00:00", port)
   end
 end

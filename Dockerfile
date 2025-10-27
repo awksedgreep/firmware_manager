@@ -1,5 +1,13 @@
 # syntax=docker/dockerfile:1
 
+# To build this image, use a command like:
+# To build and tag this image, set the IMAGE_REF environment variable, e.g., `export IMAGE_REF="firmware_manager:latest"`,
+# then run: `podman build -t "$IMAGE_REF" .`
+#
+# Alternatively, you can use a direct tag: `podman build -t firmware_manager:latest .`
+# or
+# docker build -t firmware_manager:latest .
+
 ########## Build stage (Debian) ##########
 ARG ELIXIR_VERSION=1.17.3
 FROM elixir:${ELIXIR_VERSION}-slim AS build
@@ -46,7 +54,8 @@ ENV LANG=C.UTF-8 \
     MIX_ENV=prod \
     PHX_SERVER=true \
     PORT=4000 \
-    DATABASE_PATH=/data/firmware_manager.db
+    DATABASE_PATH=/data/firmware_manager.db \
+    SKIP_MIGRATIONS=0
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates openssl libsqlite3-0 zlib1g libstdc++6 \

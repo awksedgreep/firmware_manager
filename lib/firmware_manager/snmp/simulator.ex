@@ -37,7 +37,8 @@ defmodule FirmwareManager.SNMP.Simulator do
         del_sim(id)
         :ok
 
-      _ -> :ok
+      _ ->
+        :ok
     end
   end
 
@@ -57,6 +58,7 @@ defmodule FirmwareManager.SNMP.Simulator do
         modems =
           Enum.map(modem_rows, fn %{mac_bin: mac_bin} ->
             modem_port = PortAllocator.next_port()
+
             {:ok, modem_dev} =
               Device.start_link(%{
                 port: modem_port,
@@ -66,11 +68,22 @@ defmodule FirmwareManager.SNMP.Simulator do
               })
 
             sysdescr = "Sim Cable Modem #{format_mac(mac_bin)} v1.0"
-            %{device: modem_dev, port: modem_port, mac_bin: mac_bin, mac: format_mac(mac_bin), sysdescr: sysdescr}
+
+            %{
+              device: modem_dev,
+              port: modem_port,
+              mac_bin: mac_bin,
+              mac: format_mac(mac_bin),
+              sysdescr: sysdescr
+            }
           end)
 
         put_sim(id, %{device: device, port: port, modems: modems})
-        Logger.info("Started virtual CMTS simulator on port #{port} with #{length(modems)} modem(s) for #{inspect(id)}")
+
+        Logger.info(
+          "Started virtual CMTS simulator on port #{port} with #{length(modems)} modem(s) for #{inspect(id)}"
+        )
+
         {:ok, port}
 
       {:error, reason} ->
@@ -105,7 +118,10 @@ defmodule FirmwareManager.SNMP.Simulator do
         # Keep legacy docsIf IP column for compatibility (runtime OCTET STRING for IPv4)
         |> Map.put("#{base}.10.#{idx}", %{type: "OCTET STRING", value: ip_bin})
         # ARP rows for MAC<->IPv4 mapping
-        |> Map.put("#{arp_phys_base}.#{if_index}.#{ip_suffix}", %{type: "OCTET STRING", value: mac})
+        |> Map.put("#{arp_phys_base}.#{if_index}.#{ip_suffix}", %{
+          type: "OCTET STRING",
+          value: mac
+        })
         |> Map.put("#{arp_type_base}.#{if_index}.#{ip_suffix}", %{type: "INTEGER", value: 3})
 
       rows = [%{mac_bin: mac, ip: ip, status: status} | rows]
@@ -120,7 +136,7 @@ defmodule FirmwareManager.SNMP.Simulator do
   defp format_mac(bin) when is_binary(bin) and byte_size(bin) == 6 do
     bin
     |> :binary.bin_to_list()
-    |> Enum.map(&Integer.to_string(&1, 16) |> String.pad_leading(2, "0"))
+    |> Enum.map(&(Integer.to_string(&1, 16) |> String.pad_leading(2, "0")))
     |> Enum.join(":")
   end
 
@@ -152,7 +168,9 @@ defmodule FirmwareManager.SNMP.Simulator do
     case get_sim(id) do
       %{modems: modems} when is_list(modems) ->
         Enum.into(modems, %{}, fn %{mac: mac, port: port} -> {String.downcase(mac), port} end)
-      _ -> %{}
+
+      _ ->
+        %{}
     end
   end
 
@@ -161,6 +179,7 @@ defmodule FirmwareManager.SNMP.Simulator do
   """
   def enrich_with_sim_ports(%{id: id} = _cmts, modems) when is_list(modems) do
     ports = modem_ports(%{id: id})
+
     Enum.map(modems, fn m ->
       case Map.fetch(ports, String.downcase(m.mac)) do
         {:ok, port} -> Map.put(m, :ip, "127.0.0.1") |> Map.put(:port, port)
@@ -176,7 +195,9 @@ defmodule FirmwareManager.SNMP.Simulator do
     case get_sim(id) do
       %{modems: modems} when is_list(modems) ->
         Enum.into(modems, %{}, fn %{mac: mac, sysdescr: sys} -> {String.downcase(mac), sys} end)
-      _ -> %{}
+
+      _ ->
+        %{}
     end
   end
 end

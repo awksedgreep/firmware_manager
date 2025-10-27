@@ -16,7 +16,9 @@ alias FirmwareManager.Repo
 defmodule Seeds do
   def random_mac do
     1..6
-    |> Enum.map(fn _ -> Integer.to_string(:rand.uniform(255), 16) |> String.downcase() |> String.pad_leading(2, "0") end)
+    |> Enum.map(fn _ ->
+      Integer.to_string(:rand.uniform(255), 16) |> String.downcase() |> String.pad_leading(2, "0")
+    end)
     |> Enum.join(":")
   end
 
@@ -24,12 +26,12 @@ defmodule Seeds do
     Modem.delete_all_upgrade_logs()
     IO.puts("Truncated upgrade logs")
   end
-  
+
   def truncate_cmts do
     Repo.delete_all(FirmwareManager.Modem.Cmts)
     IO.puts("Truncated CMTS entries")
   end
-  
+
   def create_cmts_entries do
     cmts_entries = [
       %{
@@ -68,11 +70,11 @@ defmodule Seeds do
         modem_snmp_write: "modem_write4"
       }
     ]
-    
+
     Enum.each(cmts_entries, fn cmts_params ->
       Modem.create_cmts(cmts_params)
     end)
-    
+
     IO.puts("Created #{length(cmts_entries)} CMTS entries")
   end
 end
@@ -134,15 +136,20 @@ for _ <- 1..2500 do
   model = "#{Enum.random(["DPC", "SB", "CGM", "SVG", "TG"])}#{:rand.uniform(4000)}"
   build = "#{:rand.uniform(100)}.#{:rand.uniform(100)}.#{:rand.uniform(100)}"
   chip = Enum.random(["Broadcom BCM3390", "Intel Puma 7", "MediaTek MT7621", "Qualcomm IPQ8074"])
-  features = Enum.random([
-    "DOCSIS 3.1, 2x2 OFDM/OFDMA",
-    "DOCSIS 3.0, 32x8 Channel Bonding",
-    "DOCSIS 3.1, 2x2 OFDM/OFDMA with Full Duplex",
-    "DOCSIS 3.0, 24x8 Channel Bonding with Voice"
-  ])
 
-  old_sysdescr = "#{vendor} #{model} Modem System #{old_version}, Hardware Rev. #{:rand.uniform(5)}, Build #{build}, #{chip}, #{features}, MAC #{random_mac_address.()}"
-  new_sysdescr = "#{vendor} #{model} Modem System #{new_version}, Hardware Rev. #{:rand.uniform(5)}, Build #{build}, #{chip}, #{features}, MAC #{random_mac_address.()}"
+  features =
+    Enum.random([
+      "DOCSIS 3.1, 2x2 OFDM/OFDMA",
+      "DOCSIS 3.0, 32x8 Channel Bonding",
+      "DOCSIS 3.1, 2x2 OFDM/OFDMA with Full Duplex",
+      "DOCSIS 3.0, 24x8 Channel Bonding with Voice"
+    ])
+
+  old_sysdescr =
+    "#{vendor} #{model} Modem System #{old_version}, Hardware Rev. #{:rand.uniform(5)}, Build #{build}, #{chip}, #{features}, MAC #{random_mac_address.()}"
+
+  new_sysdescr =
+    "#{vendor} #{model} Modem System #{new_version}, Hardware Rev. #{:rand.uniform(5)}, Build #{build}, #{chip}, #{features}, MAC #{random_mac_address.()}"
 
   upgraded_at = random_date_within_months.(6)
 

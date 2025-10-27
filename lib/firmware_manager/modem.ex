@@ -1,30 +1,22 @@
 defmodule FirmwareManager.Modem do
-  @moduledoc "Domain for Modem-related resources."
+  @moduledoc "Context for Modem-related resources (Ecto)."
 
-  require Ash.Query
-  import Ash.Expr
-
-  use Ash.Domain,
-    otp_app: :firmware_manager,
-    validate_config_inclusion?: false
-
-  resources do
-    resource FirmwareManager.Modem.UpgradeLog
-    resource FirmwareManager.Modem.Cmts
-  end
+  import Ecto.Query
+  alias FirmwareManager.Repo
+  alias FirmwareManager.Modem.{UpgradeLog, Cmts}
 
   @doc """
   Lists all upgrade logs.
-  
+
   ## Options
-  
+
   * `:limit` - Limit the number of results (default: 100)
   * `:sort` - Sort direction, can be `:asc` or `:desc` (default: `:desc`)
   * `:sort_by` - Field to sort by (default: `:upgraded_at`)
   * `:filter` - A filter to apply to the query
-  
+
   ## Examples
-  
+
       # Get all upgrade logs
       FirmwareManager.Modem.list_upgrade_logs()
       
@@ -39,57 +31,43 @@ defmodule FirmwareManager.Modem do
     offset = Keyword.get(opts, :offset, 0)
     filter_conditions = Keyword.get(opts, :filter, [])
     test_id = Keyword.get(opts, :id)
-    
-    query = FirmwareManager.Modem.UpgradeLog
-    
-    # If a specific ID is provided (for tests), only return that record
-    query = if test_id do
-      Ash.Query.filter(query, id == ^test_id)
-    else
-      query
-    end
-    
-    # Apply filter if provided
-    query = Enum.reduce(filter_conditions, query, fn {field, value}, acc ->
-      Ash.Query.filter(acc, expr(^ref(field) == ^value))
-    end)
-    
-    # Apply sorting if specified
-    query = if Keyword.has_key?(opts, :sort) or Keyword.has_key?(opts, :sort_by) do
-      sort_direction = Keyword.get(opts, :sort, :desc)
-      sort_by = Keyword.get(opts, :sort_by, :upgraded_at)
-      
-      # Handle different field names appropriately
-      case sort_by do
-        :mac_address -> Ash.Query.sort(query, mac_address: sort_direction)
-        :old_sysdescr -> Ash.Query.sort(query, old_sysdescr: sort_direction)
-        :new_sysdescr -> Ash.Query.sort(query, new_sysdescr: sort_direction)
-        :new_firmware -> Ash.Query.sort(query, new_firmware: sort_direction)
-        :upgraded_at -> Ash.Query.sort(query, upgraded_at: sort_direction)
-        _ -> 
-          # Default to upgraded_at if an unsupported sort field is provided
-          Ash.Query.sort(query, upgraded_at: :desc)
+
+    base = from(u in UpgradeLog)
+
+    query =
+      case test_id do
+        nil -> base
+        id -> from(u in base, where: u.id == ^id)
       end
-    else
-      # Default sort by upgraded_at descending
-      Ash.Query.sort(query, upgraded_at: :desc)
-    end
-    
-    # Apply offset for pagination if provided
-    query = if offset > 0 do
-      Ash.Query.offset(query, offset)
-    else
-      query
-    end
-    
-    # Apply limit unless it's :infinity
-    query = case limit do
-      :infinity -> query
-      _ -> Ash.Query.limit(query, limit)
-    end
-    
-    # Execute the query
-    Ash.read!(query)
+
+    query =
+      Enum.reduce(filter_conditions, query, fn {field, value}, acc ->
+        from(u in acc, where: field(u, ^field) == ^value)
+      end)
+
+    sort_direction = Keyword.get(opts, :sort, :desc)
+    sort_by = Keyword.get(opts, :sort_by, :upgraded_at)
+
+    query =
+      case sort_by do
+        :mac_address -> from(u in query, order_by: [{^sort_direction, u.mac_address}])
+        :old_sysdescr -> from(u in query, order_by: [{^sort_direction, u.old_sysdescr}])
+        :new_sysdescr -> from(u in query, order_by: [{^sort_direction, u.new_sysdescr}])
+        :new_firmware -> from(u in query, order_by: [{^sort_direction, u.new_firmware}])
+        :upgraded_at -> from(u in query, order_by: [{^sort_direction, u.upgraded_at}])
+        _ -> from(u in query, order_by: [desc: u.upgraded_at])
+      end
+
+    query = if offset > 0, do: from(u in query, offset: ^offset), else: query
+
+    query =
+      case limit do
+        :infinity -> query
+        n when is_integer(n) -> from(u in query, limit: ^n)
+        _ -> query
+      end
+
+    Repo.all(query)
   end
 
   # The list_upgrade_logs/1 function is already defined above with a default parameter
@@ -105,16 +83,7 @@ defmodule FirmwareManager.Modem do
       %UpgradeLog{}
 
   """
-  def get_upgrade_log!(id) do
-    result = FirmwareManager.Modem.UpgradeLog
-    |> Ash.Query.filter(id == ^id)
-    |> Ash.read_one()
-    
-    case result do
-      {:ok, record} -> record
-      {:error, _} -> raise Ecto.NoResultsError, queryable: FirmwareManager.Modem.UpgradeLog
-    end
-  end
+  def get_upgrade_log!(id), do: Repo.get!(UpgradeLog, id)
 
   @doc """
   Creates a upgrade_log.
@@ -129,9 +98,9 @@ defmodule FirmwareManager.Modem do
 
   """
   def create_upgrade_log(attrs \\ %{}) do
-    FirmwareManager.Modem.UpgradeLog
-    |> Ash.Changeset.for_create(:create, attrs)
-    |> Ash.create()
+    %UpgradeLog{}
+    |> UpgradeLog.create_changeset(attrs)
+    |> Repo.insert()
   end
 
   @doc """
@@ -139,14 +108,8 @@ defmodule FirmwareManager.Modem do
   """
   @spec upgrade_log_exists?(String.t(), String.t()) :: boolean()
   def upgrade_log_exists?(mac, firmware) when is_binary(mac) and is_binary(firmware) do
-    FirmwareManager.Modem.UpgradeLog
-    |> Ash.Query.filter(mac_address == ^mac and new_firmware == ^firmware)
-    |> Ash.Query.limit(1)
-    |> Ash.read!()
-    |> case do
-      [] -> false
-      _ -> true
-    end
+    from(u in UpgradeLog, where: u.mac_address == ^mac and u.new_firmware == ^firmware, select: 1)
+    |> Repo.exists?()
   end
 
   # Note: Individual update and delete functions are intentionally not implemented
@@ -166,8 +129,7 @@ defmodule FirmwareManager.Modem do
   """
   @spec delete_all_upgrade_logs() :: {integer(), nil}
   def delete_all_upgrade_logs do
-    # Use a direct SQL approach since we're deleting all records
-    FirmwareManager.Repo.delete_all(FirmwareManager.Modem.UpgradeLog)
+    Repo.delete_all(UpgradeLog)
   end
 
   @doc """
@@ -175,9 +137,8 @@ defmodule FirmwareManager.Modem do
   """
   @spec delete_old_upgrade_logs(DateTime.t()) :: {integer(), nil}
   def delete_old_upgrade_logs(%DateTime{} = cutoff) do
-    FirmwareManager.Modem.UpgradeLog
-    |> Ash.Query.filter(upgraded_at < ^cutoff)
-    |> Ash.destroy!()
+    from(u in UpgradeLog, where: u.upgraded_at < ^cutoff)
+    |> Repo.delete_all()
   end
 
   # CMTS CRUD Operations
@@ -206,51 +167,38 @@ defmodule FirmwareManager.Modem do
     limit = Keyword.get(opts, :limit, 100)
     offset = Keyword.get(opts, :offset, 0)
     filter_conditions = Keyword.get(opts, :filter, [])
-    
-    query = FirmwareManager.Modem.Cmts
-    
-    # Apply filter if provided
-    query = Enum.reduce(filter_conditions, query, fn {field, value}, acc ->
-      Ash.Query.filter(acc, expr(^ref(field) == ^value))
-    end)
-    
-    # Apply sorting if specified
-    query = if Keyword.has_key?(opts, :sort) or Keyword.has_key?(opts, :sort_by) do
-      sort_direction = Keyword.get(opts, :sort, :asc)
-      sort_by = Keyword.get(opts, :sort_by, :ip)
-      
-      # Handle different field names appropriately
+
+    base = from(c in Cmts)
+
+    query =
+      Enum.reduce(filter_conditions, base, fn {field, value}, acc ->
+        from(c in acc, where: field(c, ^field) == ^value)
+      end)
+
+    sort_direction = Keyword.get(opts, :sort, :asc)
+    sort_by = Keyword.get(opts, :sort_by, :ip)
+
+    query =
       case sort_by do
-        :ip -> Ash.Query.sort(query, ip: sort_direction)
-        :snmp_read -> Ash.Query.sort(query, snmp_read: sort_direction)
-        :modem_snmp_read -> Ash.Query.sort(query, modem_snmp_read: sort_direction)
-        :modem_snmp_write -> Ash.Query.sort(query, modem_snmp_write: sort_direction)
-        :inserted_at -> Ash.Query.sort(query, inserted_at: sort_direction)
-        :updated_at -> Ash.Query.sort(query, updated_at: sort_direction)
-        _ -> 
-          # Default to IP if an unsupported sort field is provided
-          Ash.Query.sort(query, ip: :asc)
+        :ip -> from(c in query, order_by: [{^sort_direction, c.ip}])
+        :snmp_read -> from(c in query, order_by: [{^sort_direction, c.snmp_read}])
+        :modem_snmp_read -> from(c in query, order_by: [{^sort_direction, c.modem_snmp_read}])
+        :modem_snmp_write -> from(c in query, order_by: [{^sort_direction, c.modem_snmp_write}])
+        :inserted_at -> from(c in query, order_by: [{^sort_direction, c.inserted_at}])
+        :updated_at -> from(c in query, order_by: [{^sort_direction, c.updated_at}])
+        _ -> from(c in query, order_by: [asc: c.ip])
       end
-    else
-      # Default sort by IP ascending
-      Ash.Query.sort(query, ip: :asc)
-    end
-    
-    # Apply offset for pagination if provided
-    query = if offset > 0 do
-      Ash.Query.offset(query, offset)
-    else
-      query
-    end
-    
-    # Apply limit unless it's :infinity
-    query = case limit do
-      :infinity -> query
-      _ -> Ash.Query.limit(query, limit)
-    end
-    
-    # Execute the query
-    Ash.read!(query)
+
+    query = if offset > 0, do: from(c in query, offset: ^offset), else: query
+
+    query =
+      case limit do
+        :infinity -> query
+        n when is_integer(n) -> from(c in query, limit: ^n)
+        _ -> query
+      end
+
+    Repo.all(query)
   end
 
   alias FirmwareManager.Modem.Cmts
@@ -266,11 +214,7 @@ defmodule FirmwareManager.Modem do
       %Cmts{}
 
   """
-  def get_cmts!(id) do
-    FirmwareManager.Modem.Cmts
-    |> Ash.Query.filter(id == ^id)
-    |> Ash.read_one!()
-  end
+  def get_cmts!(id), do: Repo.get!(Cmts, id)
 
   @doc """
   Creates a CMTS.
@@ -285,9 +229,9 @@ defmodule FirmwareManager.Modem do
 
   """
   def create_cmts(attrs \\ %{}) do
-    FirmwareManager.Modem.Cmts
-    |> Ash.Changeset.for_create(:create, attrs)
-    |> Ash.create()
+    %Cmts{}
+    |> Cmts.create_changeset(attrs)
+    |> Repo.insert()
   end
 
   @doc """
@@ -304,8 +248,8 @@ defmodule FirmwareManager.Modem do
   """
   def update_cmts(%Cmts{} = cmts, attrs) do
     cmts
-    |> Ash.Changeset.for_update(:update, attrs)
-    |> Ash.update()
+    |> Cmts.update_changeset(attrs)
+    |> Repo.update()
   end
 
   @doc """
@@ -321,9 +265,7 @@ defmodule FirmwareManager.Modem do
 
   """
   def delete_cmts(%Cmts{} = cmts) do
-    cmts
-    |> Ash.Changeset.for_destroy(:destroy)
-    |> Ash.destroy()
+    Repo.delete(cmts)
   end
 
   @doc """
@@ -336,7 +278,6 @@ defmodule FirmwareManager.Modem do
 
   """
   def change_cmts(%Cmts{} = cmts, attrs \\ %{}) do
-    cmts
-    |> Ash.Changeset.for_update(:update, attrs)
+    Cmts.update_changeset(cmts, attrs)
   end
 end

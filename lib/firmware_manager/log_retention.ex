@@ -26,14 +26,15 @@ defmodule FirmwareManager.LogRetention do
     now = DateTime.utc_now()
     # Target is 03:00 UTC next occurrence
     target_today = %DateTime{now | hour: 3, minute: 0, second: 0, microsecond: {0, 0}}
-    next = if DateTime.compare(now, target_today) == :lt do
-      target_today
-    else
-      DateTime.add(target_today, 86_400, :second)
-    end
+
+    next =
+      if DateTime.compare(now, target_today) == :lt do
+        target_today
+      else
+        DateTime.add(target_today, 86_400, :second)
+      end
 
     ms = DateTime.diff(next, now, :millisecond)
     Process.send_after(self(), :run, max(ms, 0))
   end
 end
-

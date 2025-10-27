@@ -1,27 +1,20 @@
 # syntax=docker/dockerfile:1
 
-# To build this image, use a command like:
-# To build and tag this image, set the IMAGE_REF environment variable, e.g., `export IMAGE_REF="firmware_manager:latest"`,
-# then run: `podman build -t "$IMAGE_REF" .`
-#
-# Alternatively, you can use a direct tag: `podman build -t firmware_manager:latest .`
-# or
-# docker build -t firmware_manager:latest .
+# Build and tag locally (example):
+#   export IMAGE_REF=firmware_manager:latest
+#   podman build -t "$IMAGE_REF" .
+# Target size budget: <80MB compressed (linux/arm64)
 
-########## Build stage (Debian) ##########
+########## Build stage (Alpine) ##########
 ARG ELIXIR_VERSION=1.17.3
-FROM elixir:${ELIXIR_VERSION}-slim AS build
+FROM elixir:${ELIXIR_VERSION}-alpine AS build
 
 ENV MIX_ENV=prod \
     LANG=C.UTF-8 \
     ERL_COMPILER_OPTIONS="[deterministic,no_debug_info]"
 
-SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential git curl ca-certificates \
-    libssl-dev libsqlite3-dev zlib1g-dev \
-  && rm -rf /var/lib/apt/lists/*
+# Needed for compiling deps and asset installers
+RUN apk add --no-cache build-base git curl
 
 WORKDIR /app
 
@@ -42,33 +35,52 @@ RUN mix assets.setup
 RUN mix assets.deploy
 RUN mix compile
 
-# Prepare entrypoint and build release
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint
-RUN chmod +x /usr/local/bin/entrypoint
+# Build release
 RUN mix release
 
-########## Runtime stage (Debian slim) ##########
-FROM debian:bookworm-slim AS runtime
+# Prune unused OTP libs and strip binaries inside the assembled release
+# Do this in the builder so the runtime stays minimal
+RUN set -eux; \
+    rel="/app/_build/prod/rel/firmware_manager"; \
+    # Remove rarely-used OTP apps to shrink ERTS
+    rm -rf "$rel"/erts-*/lib/{wx-*,observer-*,megaco-*,odbc-*,jinterface-*,reltool-*,debugger-*} || true; \
+    # Strip native shared libs and beam.smp where possible
+    find "$rel" -type f -name "*.so" -exec strip --strip-unneeded {} + || true; \
+    strip --strip-unneeded "$rel"/erts-*/bin/beam.smp || true
+
+# Prepare entrypoint
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint
+RUN chmod +x /usr/local/bin/entrypoint
+
+########## Runtime stage (Alpine) ##########
+FROM alpine:3.20 AS runtime
 
 ENV LANG=C.UTF-8 \
     MIX_ENV=prod \
     PHX_SERVER=true \
     PORT=4000 \
     DATABASE_PATH=/data/firmware_manager.db \
-    SKIP_MIGRATIONS=0
+    SKIP_MIGRATIONS=0 \
+    ERL_CRASH_DUMP_SECONDS=0
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates openssl libsqlite3-0 zlib1g libstdc++6 \
-  && rm -rf /var/lib/apt/lists/* \
-  && useradd --system --create-home --home-dir /app --uid 10001 app \
-  && mkdir -p /data && chown -R 10001:10001 /data
+# Only required runtime libs
+RUN apk add --no-cache ca-certificates openssl ncurses-libs zlib libstdc++ && \
+    addgroup -S app && adduser -S -H -G app -u 10001 app && \
+    mkdir -p /data && chown -R app:app /data
 
 WORKDIR /app
 
-COPY --from=build --chown=10001:10001 /app/_build/prod/rel/firmware_manager /app
-COPY --from=build --chown=10001:10001 /usr/local/bin/entrypoint /usr/local/bin/entrypoint
+# Copy the release from the builder (already pruned/stripped) and the entrypoint
+COPY --from=build --chown=app:app /app/_build/prod/rel/firmware_manager /app
+COPY --from=build --chown=app:app /usr/local/bin/entrypoint /usr/local/bin/entrypoint
+
+# Ensure OpenSSL runtime matches what Erlang/crypto was built against
+# Copy libssl/libcrypto from the builder image to avoid ABI mismatch
+# Paths for Alpine-based images (in official elixir:alpine they are under /usr/lib)
+COPY --from=build /usr/lib/libssl.so.* /usr/lib/
+COPY --from=build /usr/lib/libcrypto.so.* /usr/lib/
 
 EXPOSE 4000
-USER 10001:10001
+USER app:app
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 CMD []

@@ -39,3 +39,6 @@ npm-debug.log
 *.db
 *.db-*
 
+
+# Ignore image archives
+/*.tar.gz

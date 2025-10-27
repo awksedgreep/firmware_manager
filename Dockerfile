@@ -2,7 +2,7 @@
 
 ########## Build stage (Debian) ##########
 ARG ELIXIR_VERSION=1.17.3
-FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-27.1-debian-bookworm AS build
+FROM elixir:${ELIXIR_VERSION}-slim AS build
 
 ENV MIX_ENV=prod \
     LANG=C.UTF-8 \

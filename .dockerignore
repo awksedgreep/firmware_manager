@@ -1,0 +1,25 @@
+# Build artifacts
+/_build
+/deps
+/.elixir_ls
+/assets/node_modules
+
+# VCS
+.git
+.gitignore
+
+# Docker
+# Keep entrypoint in context
+# Ignore other docker files if any
+# (Do not ignore Dockerfile itself)
+docker/*
+!docker/entrypoint.sh
+
+# Tests and tooling
+/test
+/.tool-versions
+/.formatter.exs
+/.credo.exs
+
+# Local/OS
+.DS_Store

@@ -30,6 +30,7 @@ COPY priv ./priv
 COPY assets ./assets
 
 # Build assets and compile app
+RUN mix assets.setup
 RUN mix assets.deploy
 RUN mix compile
 

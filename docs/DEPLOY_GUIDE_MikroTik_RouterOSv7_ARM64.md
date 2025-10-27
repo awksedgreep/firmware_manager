@@ -1,11 +1,11 @@
 # FirmwareManager Deploy Guide (MikroTik RouterOS v7, ARM64 Container)
 
-Deploy the published ARM64 image to a MikroTik router using RouterOS Container. No domain/TLS; app listens on HTTP.
+Deploy the manually built image from GHCR to MikroTik RouterOS Container. No CI automation assumed.
 
 ## Prerequisites
 - RouterOS v7 with container feature available
 - Sufficient persistent storage (e.g., `disk1:`)
-- Internet access from the router to pull the image
+- You have pushed tags to GHCR (see Build Guide)
 
 ## Required env/secrets (set via RouterOS env list)
 - SECRET_KEY_BASE (required): output of `mix phx.gen.secret`
@@ -22,28 +22,11 @@ Deploy the published ARM64 image to a MikroTik router using RouterOS Container. 
 /file print where name~"containers/firmware_manager"
 ```
 
-## 2) Configure container registry (GHCR)
+## 2) Configure GHCR registry access
 ```bash
 /container/config/set registry-url=https://ghcr.io tmpdir=disk1:/containers/tmp
-# If the image is private, set credentials (Package: read token):
-# /container/config/set registry-username=mcotner registry-password=YOUR_GHCR_TOKEN
-```
-- Alternative (Docker Hub public):
-```bash
-/container/config/set registry-url=https://registry-1.docker.io tmpdir=disk1:/containers/tmp
-```
-
-Visibility/auth notes
-- Public GHCR package: no credentials needed on RouterOS.
-- Private GHCR package: create a PAT with read:packages; for org packages, enable SSO on the token. Configure on RouterOS with:
-  - /container/config set registry-username=<user-or-bot> registry-password=<PAT>
-
-Secure-ish one-liner (sets vars, applies, then erases token):
-```bash
-/system/script/environment add name=GHCR_USER value="mcotner"; \
-/system/script/environment add name=GHCR_TOKEN value="PASTE_GHCR_PAT_HERE"; \
-/container/config/set registry-url=https://ghcr.io tmpdir=disk1:/containers/tmp registry-username=$GHCR_USER registry-password=$GHCR_TOKEN; \
-/system/script/environment remove [find name=GHCR_TOKEN]
+# If private, set credentials (token with read:packages):
+# /container/config/set registry-username=<GH_USER> registry-password=<GHCR_PAT>
 ```
 
 ## 3) Networking: veth + IPs
@@ -73,10 +56,10 @@ Paste your generated SECRET_KEY_BASE.
 ```
 
 ## 6) Add the container
-Replace the image with the one you pushed (from the Build Guide).
+Use the GHCR tag you pushed (latest or versioned).
 ```bash
 /container/add name=firmware-manager \
-  remote-image=ghcr.io/mcotner/firmware_manager:v0.1.1 \
+  remote-image=ghcr.io/awksedgreep/firmware_manager:latest \
   interface=fm-veth \
   root-dir=disk1:/containers/firmware_manager/root \
   envlist=fm-env \
@@ -84,23 +67,14 @@ Replace the image with the one you pushed (from the Build Guide).
   start-on-boot=yes
 ```
 
-## 7) First start with migrations
-Use the image entrypoint’s migration hook by setting `MIGRATE=1` for the first run.
+## 7) Start and monitor
+Migrations run automatically at startup via the image entrypoint.
 ```bash
-# add MIGRATE=1
-a:= [/container/envs/add list=fm-env name=MIGRATE value=1]
-
-# start and monitor
 /container/start firmware-manager
 /container/print detail where name=firmware-manager
 /container/logs/print follow=yes where name=firmware-manager
 ```
-After a successful start (migrations applied), remove MIGRATE and restart normally:
-```bash
-/container/stop firmware-manager
-/container/envs/remove [find where list=fm-env name=MIGRATE]
-/container/start firmware-manager
-```
+- To skip migrations (not recommended), set `SKIP_MIGRATIONS=1` in the env list.
 
 ## 8) Verify service
 - From router:
@@ -119,7 +93,7 @@ Optional WAN exposure (adjust interface lists/rules as needed):
 Pull a new version and restart:
 ```bash
 /container/stop firmware-manager
-/container/set firmware-manager remote-image=ghcr.io/mcotner/firmware_manager:v0.1.2
+/container/set firmware-manager remote-image=ghcr.io/awksedgreep/firmware_manager:<new-tag>
 /container/start firmware-manager
 ```
 Persistent data is preserved because the SQLite DB lives on `fm-sqlite` (disk1:/containers/firmware_manager/data).

@@ -1,96 +1,56 @@
-# FirmwareManager Build Guide (MikroTik RouterOS Container, ARM64)
+# FirmwareManager Build Guide (Local multi-stage with Podman + manual GHCR push)
 
-This guide builds and publishes an ARM64 container image suitable for MikroTik RouterOS v7 Container.
+Build the ARM64 release image locally with Podman and (optionally) push to GHCR manually. No CI/buildx automation.
 
 ## Prerequisites
-- Docker with Buildx enabled
-- Access to GitHub Container Registry (GHCR)
-- Repo contains a Dockerfile ready for ARM64 and release builds
+- Podman
+- A GitHub Personal Access Token with read:packages, write:packages (for pushing)
 
-## Required production env/secrets
-- SECRET_KEY_BASE (required): Phoenix signing/encryption secret
-- DATABASE_PATH (required): path to SQLite db inside the container; default image uses `/data/firmware_manager.db`
-- PHX_SERVER=true (required): enables server in release
-- PORT (required): HTTP port (default 4000 in the image)
-- PHX_HOST (required): host/IP clients will use (use container IP on MikroTik, e.g., 172.31.0.2)
-- Optional: TZ (e.g., `UTC`), RELEASE_COOKIE (only for clustering/remote shell)
-
-Generate SECRET_KEY_BASE locally:
+## Version/tag setup
 ```bash
-mix phx.gen.secret
+export OWNER=awksedgreep              # change if needed
+export IMAGE=firmware_manager
+export VERSION=v0.1.1                 # bump per release
+export LOCAL_REF=localhost/$IMAGE:latest
+export GHCR_LATEST=ghcr.io/$OWNER/$IMAGE:latest
+export GHCR_VERSION=ghcr.io/$OWNER/$IMAGE:$VERSION
 ```
 
-## Image coordinates and Buildx setup
+## Build (multi-stage, locally)
 ```bash
-# Choose your GHCR coordinates
-export REGISTRY=ghcr.io
-export IMAGE_OWNER=mcotner               # GitHub user or org that will own the package
-export IMAGE_NAME=firmware_manager
-export IMAGE_TAG=v0.1.1
-export IMAGE_REF="$REGISTRY/$IMAGE_OWNER/$IMAGE_NAME:$IMAGE_TAG"
-
-# ensure buildx is available
-docker buildx ls >/dev/null 2>&1 || docker buildx create --use
-```
-
-## Build and push ARM64 image
-```bash
-# Login to GHCR (set GHCR_PAT in your environment; do not echo it)
-export GHCR_USER="$IMAGE_OWNER"
-printf '%s' "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-
-# build+push for ARM64 (linux/arm64/v8)
-docker buildx build \
-  --platform linux/arm64/v8 \
-  -t "$IMAGE_REF" \
-  --push \
+podman build \
+  -t "$LOCAL_REF" \
+  -t "$GHCR_LATEST" \
+  -t "$GHCR_VERSION" \
   .
 ```
 
-## GHCR package visibility and minimal permissions
-- Public image (Web UI): In GitHub, go to Packages > firmware_manager > Package settings and set Visibility to Public.
-- Public image (CLI): using gh and the REST API
+## Optional: push to GHCR (manual, not automated)
 ```bash
-# For a user-owned package
-gh api -X PATCH -H "Accept: application/vnd.github+json" \
-  /user/packages/container/firmware_manager/visibility \
-  -f visibility=public
+# Login without exposing the token
+echo "$GHCR_PAT" | podman login ghcr.io -u "$OWNER" --password-stdin
 
-# For an org-owned package
-ORG=your-org
-gh api -X PATCH -H "Accept: application/vnd.github+json" \
-  /orgs/$ORG/packages/container/firmware_manager/visibility \
-  -f visibility=public
+# Push tags
+podman push "$GHCR_VERSION"
+podman push "$GHCR_LATEST"
 ```
-- Private image: Use a GitHub Personal Access Token (classic) with scopes:
-  - write:packages (push)
-  - read:packages (pull)
-  - delete:packages (optional)
-  - For org packages, ensure SSO is enabled for the token.
-- The token is used only for docker login; do not print it. Keep it in GHCR_PAT env.
 
-Notes
-- The existing Dockerfile produces a small ARM64 image with a Phoenix release.
-- The runtime expects `/data` to be a writable volume and defaults `DATABASE_PATH` to `/data/firmware_manager.db`.
-- Use `MIGRATE=1` on first start to run database migrations automatically via the included entrypoint script.
-
-## Optional: Local smoke test
+## Local run (migrations auto-run on start)
 ```bash
-mkdir -p .container/data
-
-docker run --rm \
-  -e PHX_SERVER=true \
-  -e SECRET_KEY_BASE="$(mix phx.gen.secret)" \
-  -e PHX_HOST=127.0.0.1 \
-  -e PORT=4000 \
-  -e DATABASE_PATH=/data/firmware_manager.db \
-  -e MIGRATE=1 \
+export SECRET_KEY_BASE=$(openssl rand -hex 64)
+podman run --rm --name firmware-manager \
   -p 4000:4000 \
-  -v "$PWD/.container/data:/data" \
-  "$IMAGE_REF"
+  -v fm_data:/data \
+  -e SECRET_KEY_BASE \
+  -e DATABASE_PATH=/data/firmware_manager.db \
+  "$LOCAL_REF"
+```
+- The entrypoint runs Ecto migrations by default; set `-e SKIP_MIGRATIONS=1` to skip.
 
-# new terminal
-curl -i http://127.0.0.1:4000/
+## Verify
+```bash
+podman logs -f firmware-manager
+curl -fsS http://127.0.0.1:4000/ | head -c 200
 ```
 
 ## Suggested .dockerignore

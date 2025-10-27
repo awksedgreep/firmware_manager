@@ -1,26 +1,36 @@
 defmodule FirmwareManager.MixProject do
   use Mix.Project
 
-  def project do
+def project do
     [
       app: :firmware_manager,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       consolidate_protocols: Mix.env() != :dev,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      releases: [
+        firmware_manager: [
+          strip_beams: true
+        ]
+      ]
     ]
   end
 
   # Configuration for the OTP application.
   #
   # Type `mix help compile.app` for more information.
-  def application do
+def application do
     [
       mod: {FirmwareManager.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications:
+        if Mix.env() == :prod do
+          [:logger, :crypto]
+        else
+          [:logger, :runtime_tools, :crypto]
+        end
     ]
   end
 
@@ -34,22 +44,23 @@ defmodule FirmwareManager.MixProject do
   defp deps do
     [
       {:sourceror, "~> 1.8", only: [:dev, :test]},
-      {:mishka_chelekom, "~> 0.0", only: [:dev]},
+      {:mishka_chelekom, ">= 0.0.0", only: [:dev]},
       {:live_debugger, "~> 0.1", only: [:dev]},
-      {:ash_admin, "~> 0.13"},
-      {:ash_sqlite, "~> 0.2"},
-      {:ash_phoenix, "~> 2.0"},
-      {:ash, "~> 3.0"},
+      # Removed Ash stack
+      # {:ash_admin, ">= 0.13.0"},
+      # {:ash_sqlite, ">= 0.2.0"},
+      # {:ash_phoenix, ">= 2.0.0"},
+      # {:ash, "~> 3.0"},
       {:igniter, "~> 0.5", only: [:dev, :test]},
-      {:phoenix, "~> 1.7.21"},
+      {:phoenix, ">= 1.7.21"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
       {:ecto_sqlite3, ">= 0.0.0"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 1.0"},
+      {:phoenix_live_view, ">= 1.1.0"},
       {:floki, ">= 0.30.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
+{:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
       {:heroicons,

@@ -48,10 +48,12 @@ if config_env() == :prod do
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   # Configure allowed origins for LiveView/Socket
-  origins =
-    case System.get_env("CHECK_ORIGIN") do
-      nil -> ["//localhost", "//localhost:4001", "//127.0.0.1", "//[::1]", "//" <> host]
-      v -> String.split(v, ",", trim: true)
+  origin_env = System.get_env("CHECK_ORIGIN")
+  check_origin_opt =
+    cond do
+      origin_env in [nil, ""] -> ["//localhost", "//localhost:4001", "//127.0.0.1", "//[::1]", "//" <> host]
+      origin_env == "*" -> false
+      true -> String.split(origin_env, ",", trim: true)
     end
 
   config :firmware_manager, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
@@ -66,7 +68,7 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: port
     ],
-    check_origin: origins,
+    check_origin: check_origin_opt,
     secret_key_base: secret_key_base
 
   # ## SSL Support
